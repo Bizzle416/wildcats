@@ -1,0 +1,747 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Wildcats U12</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Mono:wght@500&display=swap');
+:root{
+  --bg:#0a0e1a;--surface:#111827;--surface2:#1a2235;--border:rgba(255,255,255,0.08);
+  --border2:rgba(255,255,255,0.18);--text:#f0f4ff;--muted:#8892a4;
+  --accent:#3b82f6;--accent-bg:rgba(59,130,246,0.13);
+  --green:#22c55e;--green-bg:rgba(34,197,94,0.13);
+  --red:#ef4444;--red-bg:rgba(239,68,68,0.13);
+  --amber:#f59e0b;--amber-bg:rgba(245,158,11,0.13);
+  --purple:#a78bfa;--purple-bg:rgba(167,139,250,0.13);
+  --r:12px;--rs:8px;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;padding-bottom:calc(20px + env(safe-area-inset-bottom));}
+
+/* HEADER */
+.app-header{background:var(--surface);border-bottom:1px solid var(--border);padding:11px 16px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;}
+.app-title{font-size:15px;font-weight:600;}
+.app-sub{font-size:11px;color:var(--muted);margin-top:1px;}
+.badge{font-size:10px;font-weight:600;padding:3px 9px;border-radius:20px;text-transform:uppercase;letter-spacing:0.4px;}
+.badge-idle{background:var(--surface2);color:var(--muted);}
+.badge-live{background:var(--red-bg);color:var(--red);animation:pulse 2s infinite;}
+.badge-paused{background:var(--amber-bg);color:var(--amber);}
+.badge-to{background:var(--purple-bg);color:var(--purple);animation:pulse 1.5s infinite;}
+.badge-done{background:var(--green-bg);color:var(--green);}
+@keyframes pulse{0%,100%{opacity:1;}50%{opacity:0.45;}}
+
+/* TABS */
+.tab-bar{display:flex;background:var(--surface);border-bottom:1px solid var(--border);}
+.tab{flex:1;padding:11px 4px;font-size:12px;font-weight:500;color:var(--muted);background:none;border:none;border-bottom:2px solid transparent;cursor:pointer;font-family:'DM Sans',sans-serif;white-space:nowrap;}
+.tab.active{color:var(--accent);border-bottom-color:var(--accent);}
+
+/* SCREENS */
+.screen{display:none;padding:14px 16px;}
+.screen.active{display:block;}
+
+/* CARDS */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:13px 14px;margin-bottom:10px;}
+.card-title{font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:10px;}
+
+/* INPUTS */
+.field{margin-bottom:10px;}
+.field-label{font-size:11px;color:var(--muted);font-weight:500;margin-bottom:4px;}
+input[type=text],input[type=date],input[type=time]{width:100%;background:var(--surface2);border:1px solid var(--border2);border-radius:var(--rs);color:var(--text);font-family:'DM Sans',sans-serif;font-size:15px;padding:10px 12px;outline:none;-webkit-appearance:none;appearance:none;}
+input[type=date]::-webkit-calendar-picker-indicator,input[type=time]::-webkit-calendar-picker-indicator{filter:invert(0.5);}
+input:focus{border-color:var(--accent);}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+
+/* BUTTONS */
+.btn{padding:11px 12px;border-radius:var(--rs);font-size:13px;font-weight:600;border:1px solid var(--border2);background:var(--surface2);color:var(--text);cursor:pointer;font-family:'DM Sans',sans-serif;text-align:center;-webkit-user-select:none;}
+.btn:active{opacity:0.6;transform:scale(0.96);}
+.btn-primary{background:var(--accent);border-color:var(--accent);color:#fff;}
+.btn-green{background:var(--green-bg);border-color:rgba(34,197,94,0.35);color:var(--green);}
+.btn-red{color:var(--red);border-color:rgba(239,68,68,0.35);}
+.btn-amber{color:var(--amber);border-color:rgba(245,158,11,0.35);}
+.btn-purple{background:var(--purple-bg);border-color:rgba(167,139,250,0.35);color:var(--purple);}
+.btn-grid-2{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.btn-grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;}
+.btn-full{grid-column:1/-1;width:100%;}
+
+/* GAME SCREEN TIMER */
+.timer-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
+.timer{font-family:'DM Mono',monospace;font-size:44px;font-weight:500;letter-spacing:-2px;line-height:1;color:var(--text);}
+.timer.warn{color:var(--amber);}
+.timer.urgent{color:var(--red);animation:pulse 0.8s infinite;}
+.q-bar{display:flex;gap:5px;}
+.q-btn{width:37px;height:30px;font-size:12px;font-weight:600;border:1px solid var(--border2);border-radius:var(--rs);background:var(--surface2);color:var(--muted);cursor:pointer;font-family:'DM Sans',sans-serif;}
+.q-btn.active{background:var(--accent-bg);color:var(--accent);border-color:var(--accent);}
+.q-btn.done{background:var(--green-bg);color:var(--green);border-color:var(--green);}
+.game-meta-line{font-size:12px;color:var(--muted);margin-bottom:10px;}
+
+/* TIMEOUT BANNER */
+.to-banner{background:var(--purple-bg);border:1px solid rgba(167,139,250,0.35);border-radius:var(--rs);padding:8px 12px;font-size:13px;color:var(--purple);font-weight:600;text-align:center;margin-bottom:8px;display:none;}
+
+/* ON-COUNT / WARN */
+.on-count{font-size:12px;color:var(--muted);margin:6px 0 4px;}
+.on-count strong{color:var(--text);}
+.warn-bar{background:var(--amber-bg);border:1px solid rgba(245,158,11,0.3);border-radius:var(--rs);padding:7px 10px;font-size:12px;color:var(--amber);margin-bottom:6px;display:none;}
+
+/* ROSTER TABLE */
+.roster-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;}
+.rtbl{width:100%;border-collapse:collapse;font-size:12px;}
+.rtbl th{text-align:right;padding:5px 5px;color:var(--muted);font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.4px;border-bottom:1px solid var(--border);white-space:nowrap;}
+.rtbl th:first-child{text-align:left;min-width:130px;}
+.rtbl td{padding:1px 0;border-bottom:1px solid var(--border);vertical-align:middle;}
+.rtbl tr:last-child td{border-bottom:none;}
+.rtbl tr.on-row td{background:rgba(34,197,94,0.04);}
+.player-cell{display:flex;align-items:center;gap:7px;padding:7px 5px;}
+.toggle-ring{width:26px;height:26px;border-radius:50%;border:1.5px solid var(--border2);background:var(--surface2);display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;transition:all 0.1s;-webkit-user-select:none;}
+.toggle-ring.on{background:var(--green);border-color:var(--green);}
+.toggle-ring:active{transform:scale(0.85);}
+.tr-dot{width:7px;height:7px;border-radius:50%;background:var(--muted);}
+.toggle-ring.on .tr-dot{background:#fff;}
+.p-num{font-size:10px;font-weight:600;color:var(--muted);font-family:'DM Mono',monospace;min-width:20px;}
+.p-name{font-size:12px;font-weight:500;color:var(--text);white-space:nowrap;}
+.on-row .p-num{color:var(--green);}
+.on-row .p-name{color:var(--green);}
+.sc{text-align:right;padding:6px 5px;font-variant-numeric:tabular-nums;color:var(--text);white-space:nowrap;}
+.sc.mono{font-family:'DM Mono',monospace;font-size:11px;}
+.sc.blue{color:#60a5fa;}
+.sc.red{color:var(--red);}
+.sc.dim{color:var(--muted);}
+.stat-tap{display:inline-flex;align-items:center;justify-content:center;width:30px;height:26px;border-radius:5px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:12px;font-weight:600;cursor:pointer;-webkit-user-select:none;font-family:'DM Sans',sans-serif;}
+.stat-tap:active{transform:scale(0.83);opacity:0.7;}
+.stat-tap.mk{background:rgba(96,165,250,0.15);border-color:rgba(96,165,250,0.4);color:#60a5fa;}
+.stat-tap.ms{color:var(--muted);}
+.stat-tap.dg{background:var(--red-bg);border-color:rgba(239,68,68,0.3);color:var(--red);}
+.tap-val{display:inline-flex;align-items:center;gap:3px;justify-content:flex-end;}
+
+/* SCORE SECTION */
+.score-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:13px 14px;margin-top:8px;}
+.score-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
+.score-team{text-align:center;flex:1;}
+.score-team-name{font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:2px;}
+.score-num{font-family:'DM Mono',monospace;font-size:38px;font-weight:500;color:var(--text);line-height:1;}
+.score-vs{font-size:13px;color:var(--muted);padding:0 8px;}
+.score-btns{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.score-team-btns{display:flex;flex-direction:column;gap:6px;}
+.score-team-label{font-size:10px;color:var(--muted);text-align:center;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:2px;}
+.pts-row{display:flex;gap:5px;justify-content:center;}
+.pts-btn{flex:1;padding:9px 4px;border-radius:var(--rs);font-size:13px;font-weight:600;border:1px solid var(--border2);background:var(--surface2);color:var(--text);cursor:pointer;font-family:'DM Sans',sans-serif;text-align:center;-webkit-user-select:none;}
+.pts-btn:active{transform:scale(0.93);opacity:0.7;}
+.pts-btn.home{border-color:rgba(34,197,94,0.35);color:var(--green);}
+.pts-btn.away{border-color:rgba(239,68,68,0.35);color:var(--red);}
+.undo-score{font-size:11px;color:var(--muted);text-align:center;margin-top:6px;cursor:pointer;}
+
+/* SEASON */
+.tbl-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;}
+table.stbl{width:100%;border-collapse:collapse;font-size:12px;min-width:320px;}
+table.stbl th{text-align:right;padding:5px 5px;color:var(--muted);font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.4px;border-bottom:1px solid var(--border);white-space:nowrap;}
+table.stbl th:first-child{text-align:left;}
+table.stbl td{padding:8px 5px;border-bottom:1px solid var(--border);text-align:right;color:var(--text);font-variant-numeric:tabular-nums;white-space:nowrap;}
+table.stbl td:first-child{text-align:left;font-weight:500;}
+.bar-bg{background:var(--surface2);border-radius:3px;height:5px;margin-top:3px;width:44px;}
+.bar-fill{height:5px;border-radius:3px;}
+.game-log-item{padding:10px 0;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+.game-log-item:last-child{border-bottom:none;}
+.game-result{font-size:12px;font-weight:600;padding:3px 8px;border-radius:5px;}
+.result-w{background:var(--green-bg);color:var(--green);}
+.result-l{background:var(--red-bg);color:var(--red);}
+.result-d{background:var(--amber-bg);color:var(--amber);}
+
+/* SETUP */
+.setup-row{display:flex;gap:6px;align-items:center;margin-bottom:7px;}
+.setup-row input:first-child{width:56px;flex:none;}
+</style>
+</head>
+<body>
+
+<div class="app-header">
+  <div>
+    <div class="app-title">Eltham Wildcats U12</div>
+    <div class="app-sub">Rep tracker</div>
+  </div>
+  <span class="badge badge-idle" id="status-badge">Idle</span>
+</div>
+
+<div class="tab-bar">
+  <button class="tab active" id="tab-btn-pregame" onclick="showScreen('pregame',this)">Game Setup</button>
+  <button class="tab" id="tab-btn-game" onclick="showScreen('game',this)">Game</button>
+  <button class="tab" id="tab-btn-season" onclick="showScreen('season',this)">Season</button>
+  <button class="tab" id="tab-btn-setup" onclick="showScreen('setup',this)">Squad</button>
+</div>
+
+<!-- ═══ SCREEN 1: PREGAME ═══ -->
+<div id="screen-pregame" class="screen active">
+  <div class="card">
+    <div class="card-title">Game details</div>
+    <div class="two-col">
+      <div class="field">
+        <div class="field-label">Date</div>
+        <input type="date" id="g-date" />
+      </div>
+      <div class="field">
+        <div class="field-label">Game time</div>
+        <input type="time" id="g-time" />
+      </div>
+    </div>
+    <div class="field">
+      <div class="field-label">Opposition</div>
+      <input type="text" id="g-opp" placeholder="e.g. Heidelberg" />
+    </div>
+    <div class="field">
+      <div class="field-label">Location / Venue</div>
+      <input type="text" id="g-venue" placeholder="e.g. Eltham Community Centre" />
+    </div>
+    <button class="btn btn-primary btn-full" style="width:100%;margin-top:4px;padding:13px;" onclick="startGame()">Start game</button>
+  </div>
+</div>
+
+<!-- ═══ SCREEN 2: GAME ═══ -->
+<div id="screen-game" class="screen">
+
+  <!-- timer + quarters -->
+  <div class="card">
+    <div class="timer-row">
+      <div>
+        <div id="game-timer" class="timer">10:00</div>
+        <div class="game-meta-line" id="game-meta">—</div>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:7px;">
+        <div class="q-bar">
+          <button class="q-btn" id="q1" onclick="setQuarter(1)">Q1</button>
+          <button class="q-btn" id="q2" onclick="setQuarter(2)">Q2</button>
+          <button class="q-btn" id="q3" onclick="setQuarter(3)">Q3</button>
+          <button class="q-btn" id="q4" onclick="setQuarter(4)">Q4</button>
+        </div>
+        <div id="undo-stat-btn" style="font-size:11px;color:var(--amber);cursor:pointer;display:none;" onclick="undoStat()">↩ undo stat</div>
+      </div>
+    </div>
+    <!-- clock controls -->
+    <div class="btn-grid-3" style="margin-bottom:8px;">
+      <button class="btn btn-primary" id="pause-btn" onclick="togglePause()">Pause</button>
+      <button class="btn btn-amber" onclick="resetQClock()">Reset Q</button>
+      <button class="btn btn-red" onclick="endGame()">End game</button>
+    </div>
+    <!-- timeout buttons -->
+    <div class="btn-grid-2">
+      <button class="btn btn-green" onclick="callTimeout('Eltham')">Eltham timeout</button>
+      <button class="btn btn-purple" onclick="callTimeout('Opposition')">Opp timeout</button>
+    </div>
+  </div>
+
+  <!-- timeout banner -->
+  <div class="to-banner" id="to-banner">TIMEOUT — <span id="to-team"></span></div>
+
+  <!-- on-court count + warn -->
+  <div class="on-count" id="on-count">On court: <strong>0</strong>/5</div>
+  <div class="warn-bar" id="warn5">5 players on court — sub someone off first</div>
+
+  <!-- roster + stat table -->
+  <div class="card" style="padding:10px 0;">
+    <div class="roster-wrap">
+      <table class="rtbl" id="roster-tbl">
+        <thead>
+          <tr>
+            <th>Player</th>
+            <th>MIN</th><th>FGM</th><th>FGA</th><th>FG%</th>
+            <th>AST</th><th>REB</th><th>STL</th><th>BLK</th><th>TO</th>
+          </tr>
+        </thead>
+        <tbody id="roster-body"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- score -->
+  <div class="score-card">
+    <div class="score-header">
+      <div class="score-team">
+        <div class="score-team-name">Eltham</div>
+        <div class="score-num" id="score-home">0</div>
+      </div>
+      <div class="score-vs">vs</div>
+      <div class="score-team">
+        <div class="score-team-name" id="score-opp-name">Opponent</div>
+        <div class="score-num" id="score-away">0</div>
+      </div>
+    </div>
+    <div class="score-btns">
+      <div class="score-team-btns">
+        <div class="score-team-label">Eltham</div>
+        <div class="pts-row">
+          <button class="pts-btn home" onclick="addScore('home',1)">+1</button>
+          <button class="pts-btn home" onclick="addScore('home',2)">+2</button>
+          <button class="pts-btn home" onclick="addScore('home',3)">+3</button>
+        </div>
+      </div>
+      <div class="score-team-btns">
+        <div class="score-team-label" id="away-btn-label">Opponent</div>
+        <div class="pts-row">
+          <button class="pts-btn away" onclick="addScore('away',1)">+1</button>
+          <button class="pts-btn away" onclick="addScore('away',2)">+2</button>
+          <button class="pts-btn away" onclick="addScore('away',3)">+3</button>
+        </div>
+      </div>
+    </div>
+    <div class="undo-score" onclick="undoScore()">↩ undo last score</div>
+  </div>
+
+</div>
+
+<!-- ═══ SCREEN 3: SEASON ═══ -->
+<div id="screen-season" class="screen">
+  <div class="card">
+    <div class="card-title">Season minutes</div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:10px;">Fair share: <strong style="color:var(--text);" id="fair-share">—</strong> min/game · <span id="game-count">0</span> games</div>
+    <div class="tbl-wrap">
+      <table class="stbl">
+        <thead><tr><th style="min-width:100px;">Player</th><th>Total</th><th>Avg/g</th><th>vs fair</th></tr></thead>
+        <tbody id="season-mins-body"></tbody>
+      </table>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">Season stats</div>
+    <div class="tbl-wrap">
+      <table class="stbl">
+        <thead><tr><th style="min-width:100px;">Player</th><th>FGM</th><th>FGA</th><th>FG%</th><th>AST</th><th>REB</th><th>STL</th><th>BLK</th><th>TO</th></tr></thead>
+        <tbody id="season-stats-body"></tbody>
+      </table>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">Game log</div>
+    <div id="game-log"><div style="font-size:13px;color:var(--muted);">No games yet</div></div>
+  </div>
+</div>
+
+<!-- ═══ SCREEN 4: SQUAD SETUP ═══ -->
+<div id="screen-setup" class="screen">
+  <div class="card">
+    <div class="card-title">Squad</div>
+    <div id="player-list-setup"></div>
+    <div style="display:flex;gap:6px;align-items:center;margin-top:8px;">
+      <input type="text" id="new-num" placeholder="#" style="width:56px;" />
+      <input type="text" id="new-name" placeholder="Player name" />
+      <button class="btn btn-primary" style="padding:9px 14px;white-space:nowrap;" onclick="addPlayer()">Add</button>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">Danger zone</div>
+    <button class="btn btn-red btn-full" style="width:100%;" onclick="clearAll()">Clear all game data</button>
+  </div>
+</div>
+
+<script>
+const SK='wildcats_v6';
+const STATS=['fgm','fga','ast','reb','stl','blk','tov'];
+const Q_SECS=600;
+const SQUAD=[
+  {id:4, num:'#4', name:'Elara Jewell'},
+  {id:6, num:'#6', name:'Grace Burslem'},
+  {id:8, num:'#8', name:'Evie Davis'},
+  {id:10,num:'#10',name:'Quinn Cukier'},
+  {id:13,num:'#13',name:'Emilia Wynne'},
+  {id:15,num:'#15',name:'Madeline Hadley'},
+  {id:21,num:'#21',name:'Ellie Spithill'},
+  {id:22,num:'#22',name:'Harper Bolton'},
+  {id:23,num:'#23',name:"Zoe O'Connell"},
+  {id:33,num:'#33',name:'Eva Leverton'}
+];
+
+let state={players:[],games:[],currentGame:null};
+let timerInterval=null;
+let statLog=[];
+let scoreLog=[];
+
+function emptyStats(){return{fgm:0,fga:0,ast:0,reb:0,stl:0,blk:0,tov:0};}
+
+function save(){try{localStorage.setItem(SK,JSON.stringify(state));}catch(e){}}
+
+function load(){
+  try{const r=localStorage.getItem(SK);if(r)state=JSON.parse(r);}catch(e){}
+  if(!state.players||state.players.length===0)state.players=SQUAD.map(p=>({...p}));
+  if(!state.games)state.games=[];
+  // pre-fill pregame form
+  const today=new Date().toISOString().split('T')[0];
+  document.getElementById('g-date').value=today;
+  document.getElementById('g-time').value='18:00';
+  if(state.currentGame){
+    // game in progress — go to game screen
+    showScreen('game',document.getElementById('tab-btn-game'));
+  }
+  render();
+  if(state.currentGame&&state.currentGame.running)startTimer();
+}
+
+/* ── NAVIGATION ── */
+function showScreen(name,el){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById('screen-'+name).classList.add('active');
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  if(el)el.classList.add('active');
+  if(name==='season')renderSeason();
+  if(name==='setup')renderSetup();
+}
+
+/* ── RENDER ── */
+function render(){renderRoster();renderStatus();renderTimer();renderScore();}
+
+function renderStatus(){
+  const cg=state.currentGame;
+  const badge=document.getElementById('status-badge');
+  const meta=document.getElementById('game-meta');
+  if(!cg){badge.className='badge badge-idle';badge.textContent='Idle';if(meta)meta.textContent='—';return;}
+  const parts=[cg.date,cg.time,'vs '+cg.opponent,cg.venue].filter(Boolean);
+  if(meta)meta.textContent=parts.join(' · ');
+  if(cg.timeout){badge.className='badge badge-to';badge.textContent='Timeout';}
+  else if(cg.running){badge.className='badge badge-live';badge.textContent='Live';}
+  else if(cg.ended){badge.className='badge badge-done';badge.textContent='Done';}
+  else{badge.className='badge badge-paused';badge.textContent='Paused';}
+  document.getElementById('pause-btn').textContent=cg.running?'Pause':'Resume';
+  for(let q=1;q<=4;q++){
+    const b=document.getElementById('q'+q);b.className='q-btn';
+    if(cg.quarter===q)b.classList.add('active');
+    else if(q<cg.quarter)b.classList.add('done');
+  }
+  document.getElementById('undo-stat-btn').style.display=statLog.length>0?'':'none';
+  const tb=document.getElementById('to-banner');
+  if(cg.timeout){tb.style.display='block';document.getElementById('to-team').textContent=cg.timeoutTeam;}
+  else{tb.style.display='none';}
+  // score opponent name
+  const oppName=cg.opponent||'Opponent';
+  document.getElementById('score-opp-name').textContent=oppName;
+  document.getElementById('away-btn-label').textContent=oppName;
+}
+
+function renderTimer(){
+  const cg=state.currentGame;
+  const secs=cg?Math.max(0,Math.ceil(cg.qRemaining)):Q_SECS;
+  const m=Math.floor(secs/60),s=secs%60;
+  const el=document.getElementById('game-timer');
+  el.textContent=m+':'+String(s).padStart(2,'0');
+  el.className='timer'+(secs<=30&&cg?' urgent':secs<=60&&cg?' warn':'');
+}
+
+function renderScore(){
+  const cg=state.currentGame;
+  document.getElementById('score-home').textContent=cg?cg.scoreHome:0;
+  document.getElementById('score-away').textContent=cg?cg.scoreAway:0;
+}
+
+/* ── ROSTER TABLE ── */
+function renderRoster(){
+  const tbody=document.getElementById('roster-body');
+  const cg=state.currentGame;
+  // subs allowed when: game exists, not ended, either running OR paused OR timeout
+  const canSub=cg&&!cg.ended;
+  const now=(cg&&cg.running)?Date.now():null;
+  const onCount=cg?cg.onCourt.length:0;
+  document.getElementById('on-count').innerHTML='On court: <strong>'+onCount+'</strong>/5';
+  document.getElementById('warn5').style.display=(onCount>=5&&canSub)?'':'none';
+
+  const sorted=[...state.players].sort((a,b)=>a.id-b.id);
+  tbody.innerHTML='';
+  sorted.forEach(p=>{
+    const isOn=cg&&cg.onCourt.includes(p.id);
+    const mins=getPlayerMins(p.id,now);
+    const s=cg&&cg.stats?cg.stats[p.id]:null;
+    const fgpct=s&&s.fga>0?Math.round(s.fgm/s.fga*100)+'%':'—';
+    const tr=document.createElement('tr');
+    if(isOn)tr.classList.add('on-row');
+
+    // player name cell
+    const nameTd=document.createElement('td');
+    nameTd.innerHTML=`<div class="player-cell">
+      <div class="toggle-ring${isOn?' on':''}" onclick="togglePlayer(${p.id})"><div class="tr-dot"></div></div>
+      <div><div class="p-num">${p.num}</div><div class="p-name">${p.name}</div></div>
+    </div>`;
+    tr.appendChild(nameTd);
+
+    // mins
+    const minsTd=document.createElement('td');
+    minsTd.className='sc mono';minsTd.textContent=fmtMins(mins);tr.appendChild(minsTd);
+
+    if(cg&&!cg.ended){
+      // FGM tap
+      tr.appendChild(makeTapCell(p.id,'fgm',s?s.fgm:0,'mk'));
+      // FGA (miss button + count)
+      const fgaTd=document.createElement('td');fgaTd.className='sc';
+      fgaTd.innerHTML=`<div class="tap-val"><button class="stat-tap ms" onclick="logStat(${p.id},'fga_only')">M</button><span style="min-width:14px;">${s?s.fga:0}</span></div>`;
+      tr.appendChild(fgaTd);
+      // FG%
+      const pctTd=document.createElement('td');pctTd.className='sc dim';pctTd.textContent=fgpct;tr.appendChild(pctTd);
+      tr.appendChild(makeTapCell(p.id,'ast',s?s.ast:0,''));
+      tr.appendChild(makeTapCell(p.id,'reb',s?s.reb:0,''));
+      tr.appendChild(makeTapCell(p.id,'stl',s?s.stl:0,''));
+      tr.appendChild(makeTapCell(p.id,'blk',s?s.blk:0,''));
+      tr.appendChild(makeTapCell(p.id,'tov',s?s.tov:0,'dg'));
+    } else {
+      const vals=s?[s.fgm,s.fga,fgpct,s.ast,s.reb,s.stl,s.blk,s.tov]:['—','—','—','—','—','—','—','—'];
+      vals.forEach((v,i)=>{
+        const td=document.createElement('td');
+        td.className='sc'+(i===0?' blue':i===7?' red':'');
+        td.textContent=v;tr.appendChild(td);
+      });
+    }
+    tbody.appendChild(tr);
+  });
+}
+
+function makeTapCell(pid,stat,val,cls){
+  const td=document.createElement('td');td.className='sc';
+  const color=cls==='dg'?'color:var(--red);':cls==='mk'?'color:#60a5fa;':'';
+  td.innerHTML=`<div class="tap-val"><button class="stat-tap${cls?' '+cls:''}" onclick="logStat(${pid},'${stat}')">+</button><span style="min-width:14px;${color}">${val}</span></div>`;
+  return td;
+}
+
+/* ── GAME CONTROL ── */
+function startGame(){
+  const date=document.getElementById('g-date').value;
+  const time=document.getElementById('g-time').value;
+  const opp=document.getElementById('g-opp').value.trim();
+  const venue=document.getElementById('g-venue').value.trim();
+  state.currentGame={
+    id:Date.now(),
+    date:fmtDate(date),time:time,
+    opponent:opp||'Unknown',venue:venue,
+    quarter:1,running:true,ended:false,timeout:false,timeoutTeam:'',
+    elapsed:0,lastTick:Date.now(),qRemaining:Q_SECS,
+    onCourt:[],stints:{},minutes:{},stats:{},
+    scoreHome:0,scoreAway:0
+  };
+  state.players.forEach(p=>{state.currentGame.minutes[p.id]=0;state.currentGame.stats[p.id]=emptyStats();});
+  statLog=[];scoreLog=[];
+  startTimer();save();
+  showScreen('game',document.getElementById('tab-btn-game'));
+  render();
+}
+
+function fmtDate(d){
+  if(!d)return'';
+  try{const p=d.split('-');return p[2]+'/'+p[1]+'/'+p[0];}catch(e){return d;}
+}
+
+function startTimer(){
+  if(timerInterval)clearInterval(timerInterval);
+  if(!state.currentGame)return;
+  state.currentGame.lastTick=Date.now();
+  timerInterval=setInterval(()=>{
+    const cg=state.currentGame;
+    if(!cg||!cg.running)return;
+    const now=Date.now();
+    const delta=(now-cg.lastTick)/1000;
+    cg.elapsed+=delta;
+    cg.qRemaining=Math.max(0,cg.qRemaining-delta);
+    cg.lastTick=now;
+    renderTimer();
+    if(cg.qRemaining<=0){
+      if(navigator.vibrate)navigator.vibrate([200,100,200]);
+      pauseInternal();save();renderStatus();
+    }
+    if(Math.floor(cg.elapsed)%15===0)save();
+  },500);
+}
+
+function pauseInternal(){
+  const cg=state.currentGame;if(!cg)return;
+  cg.running=false;
+  const now=Date.now();
+  cg.onCourt.forEach(pid=>{
+    if(cg.stints[pid]){cg.minutes[pid]=(cg.minutes[pid]||0)+(now-cg.stints[pid])/60000;delete cg.stints[pid];}
+  });
+  if(timerInterval)clearInterval(timerInterval);
+}
+
+function togglePause(){
+  const cg=state.currentGame;if(!cg||cg.ended)return;
+  if(cg.running){pauseInternal();cg.timeout=false;save();render();}
+  else{
+    cg.running=true;cg.timeout=false;
+    const now=Date.now();cg.lastTick=now;
+    cg.onCourt.forEach(pid=>{cg.stints[pid]=now;});
+    startTimer();save();render();
+  }
+}
+
+function callTimeout(team){
+  const cg=state.currentGame;if(!cg||cg.ended)return;
+  if(cg.running)pauseInternal();
+  cg.timeout=true;cg.timeoutTeam=team;
+  save();render();
+}
+
+function resetQClock(){
+  const cg=state.currentGame;if(!cg)return;
+  cg.qRemaining=Q_SECS;save();renderTimer();
+}
+
+function setQuarter(q){
+  const cg=state.currentGame;if(!cg)return;
+  cg.quarter=q;cg.qRemaining=Q_SECS;save();renderStatus();renderTimer();
+}
+
+function endGame(){
+  const cg=state.currentGame;if(!cg)return;
+  if(!confirm('End game and save to season?'))return;
+  pauseInternal();
+  cg.ended=true;cg.running=false;cg.timeout=false;cg.onCourt=[];
+  const summary={minutes:{},stats:{}};
+  state.players.forEach(p=>{summary.minutes[p.id]=cg.minutes[p.id]||0;summary.stats[p.id]={...cg.stats[p.id]};});
+  cg.summary=summary;
+  state.games.push({...cg});
+  state.games.sort((a,b)=>new Date(b.date.split('/').reverse().join('-'))-new Date(a.date.split('/').reverse().join('-')));
+  state.currentGame=null;statLog=[];scoreLog=[];
+  save();render();
+  showScreen('season',document.getElementById('tab-btn-season'));
+}
+
+/* ── SUBS (allowed any time game is active, even paused) ── */
+function togglePlayer(pid){
+  const cg=state.currentGame;if(!cg||cg.ended)return;
+  const idx=cg.onCourt.indexOf(pid);const isOn=idx!==-1;
+  if(!isOn&&cg.onCourt.length>=5){document.getElementById('warn5').style.display='block';return;}
+  const now=Date.now();
+  if(isOn){
+    cg.onCourt.splice(idx,1);
+    if(cg.running&&cg.stints[pid]){cg.minutes[pid]=(cg.minutes[pid]||0)+(now-cg.stints[pid])/60000;delete cg.stints[pid];}
+  } else {
+    cg.onCourt.push(pid);
+    if(cg.running)cg.stints[pid]=now;
+  }
+  save();renderRoster();renderStatus();
+}
+
+/* ── STATS ── */
+function logStat(pid,type){
+  const cg=state.currentGame;if(!cg||cg.ended)return;
+  const s=cg.stats[pid];
+  if(type==='fgm'){s.fgm++;s.fga++;}
+  else if(type==='fga_only'){s.fga++;}
+  else{s[type]++;}
+  statLog.push({pid,type});
+  save();renderRoster();renderStatus();
+}
+
+function undoStat(){
+  const cg=state.currentGame;if(!cg||statLog.length===0)return;
+  const last=statLog.pop();const s=cg.stats[last.pid];
+  if(last.type==='fgm'){if(s.fgm>0)s.fgm--;if(s.fga>0)s.fga--;}
+  else if(last.type==='fga_only'){if(s.fga>0)s.fga--;}
+  else{if(s[last.type]>0)s[last.type]--;}
+  save();renderRoster();renderStatus();
+}
+
+/* ── SCORE ── */
+function addScore(team,pts){
+  const cg=state.currentGame;if(!cg||cg.ended)return;
+  if(team==='home')cg.scoreHome+=pts;else cg.scoreAway+=pts;
+  scoreLog.push({team,pts});
+  save();renderScore();
+}
+
+function undoScore(){
+  const cg=state.currentGame;if(!cg||scoreLog.length===0)return;
+  const last=scoreLog.pop();
+  if(last.team==='home')cg.scoreHome=Math.max(0,cg.scoreHome-last.pts);
+  else cg.scoreAway=Math.max(0,cg.scoreAway-last.pts);
+  save();renderScore();
+}
+
+/* ── HELPERS ── */
+function getPlayerMins(pid,now){
+  const cg=state.currentGame;if(!cg)return 0;
+  let t=cg.minutes[pid]||0;
+  if(now&&cg.stints[pid])t+=(now-cg.stints[pid])/60000;
+  return t;
+}
+
+function fmtMins(m){return Math.floor(m)+':'+String(Math.floor((m-Math.floor(m))*60)).padStart(2,'0');}
+
+/* ── SEASON ── */
+function renderSeason(){
+  const games=state.games;
+  document.getElementById('game-count').textContent=games.length;
+  const fairShare=(40*5/state.players.length).toFixed(1);
+  document.getElementById('fair-share').textContent=fairShare;
+  if(games.length===0){
+    document.getElementById('season-mins-body').innerHTML='<tr><td colspan="4" style="color:var(--muted);padding:12px 0;">No games yet</td></tr>';
+    document.getElementById('season-stats-body').innerHTML='<tr><td colspan="9" style="color:var(--muted);padding:12px 0;">No games yet</td></tr>';
+    document.getElementById('game-log').innerHTML='<div style="font-size:13px;color:var(--muted);">No games yet</div>';
+    return;
+  }
+  const totMins={},totStats={};
+  state.players.forEach(p=>{totMins[p.id]=0;totStats[p.id]=emptyStats();});
+  games.forEach(g=>{
+    if(g.summary){
+      state.players.forEach(p=>{
+        totMins[p.id]+=(g.summary.minutes[p.id]||0);
+        if(g.summary.stats)STATS.forEach(k=>{totStats[p.id][k]+=(g.summary.stats[p.id]?g.summary.stats[p.id][k]||0:0);});
+      });
+    }
+  });
+  const maxMins=Math.max(...state.players.map(p=>totMins[p.id]),1);
+  const fs=parseFloat(fairShare);
+  const sorted=[...state.players].sort((a,b)=>a.id-b.id);
+  document.getElementById('season-mins-body').innerHTML=sorted.map(p=>{
+    const total=totMins[p.id],avg=total/games.length;
+    const pct=Math.round(total/maxMins*100);
+    const col=avg<fs*0.6?'#ef4444':avg<fs*0.85?'#f59e0b':'#22c55e';
+    return`<tr><td>${p.num} ${p.name}</td><td>${fmtMins(total)}</td><td>${fmtMins(avg)}</td><td><div class="bar-bg"><div class="bar-fill" style="width:${pct}%;background:${col};"></div></div></td></tr>`;
+  }).join('');
+  document.getElementById('season-stats-body').innerHTML=sorted.map(p=>{
+    const s=totStats[p.id];const fg=s.fga>0?Math.round(s.fgm/s.fga*100)+'%':'—';
+    return`<tr><td>${p.num} ${p.name}</td><td>${s.fgm}</td><td>${s.fga}</td><td>${fg}</td><td>${s.ast}</td><td>${s.reb}</td><td>${s.stl}</td><td>${s.blk}</td><td>${s.tov}</td></tr>`;
+  }).join('');
+  // game log sorted by date (newest first)
+  document.getElementById('game-log').innerHTML=games.map(g=>{
+    const diff=g.scoreHome-g.scoreAway;
+    const resCls=diff>0?'result-w':diff<0?'result-l':'result-d';
+    const resLabel=diff>0?'W':diff<0?'L':'D';
+    const score=g.scoreHome+' – '+g.scoreAway;
+    return`<div class="game-log-item">
+      <div>
+        <div style="font-weight:600;font-size:13px;">${g.date}${g.time?' · '+g.time:''}</div>
+        <div style="font-size:12px;color:var(--muted);">vs ${g.opponent}${g.venue?' · '+g.venue:''}</div>
+      </div>
+      <div style="text-align:right;">
+        <span class="game-result ${resCls}">${resLabel} ${score}</span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+/* ── SETUP ── */
+function renderSetup(){
+  const sorted=[...state.players].sort((a,b)=>a.id-b.id);
+  document.getElementById('player-list-setup').innerHTML=sorted.map(p=>`
+    <div class="setup-row">
+      <input type="text" value="${p.num}" onchange="updateNum(${p.id},this.value)" />
+      <input type="text" value="${p.name}" onchange="renamePlayer(${p.id},this.value)" />
+      <button class="btn btn-red" style="padding:8px 10px;" onclick="removePlayer(${p.id})">✕</button>
+    </div>`).join('');
+}
+
+function updateNum(id,v){const p=state.players.find(p=>p.id===id);if(p){p.num=v;save();}}
+function renamePlayer(id,v){const p=state.players.find(p=>p.id===id);if(p){p.name=v;save();}}
+function removePlayer(id){state.players=state.players.filter(p=>p.id!==id);save();renderSetup();}
+function addPlayer(){
+  const num=document.getElementById('new-num').value.trim();
+  const name=document.getElementById('new-name').value.trim();
+  if(!name)return;
+  const id=Date.now();
+  state.players.push({id,num:num?'#'+num.replace('#',''):'-',name});
+  if(state.currentGame){state.currentGame.minutes[id]=0;state.currentGame.stats[id]=emptyStats();}
+  document.getElementById('new-num').value='';document.getElementById('new-name').value='';
+  save();renderSetup();
+}
+function clearAll(){
+  if(!confirm('Clear all game data? Squad will be kept.'))return;
+  state={players:state.players,games:[],currentGame:null};
+  save();render();
+}
+
+load();
+</script>
+</body>
+</html>
