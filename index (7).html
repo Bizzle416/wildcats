@@ -1,0 +1,1570 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<title>Wildcats U12</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Mono:wght@500&display=swap');
+:root{
+  --bg:#e8edf5;--surface:#ffffff;--surface2:#f0f4fb;--border:rgba(0,0,0,0.08);
+  --border2:rgba(0,0,0,0.14);--text:#1a2035;--muted:#6b7a99;
+  --accent:#3b82f6;--accent-bg:rgba(59,130,246,0.1);
+  --green:#16a34a;--green-bg:rgba(22,163,74,0.1);
+  --red:#dc2626;--red-bg:rgba(220,38,38,0.1);
+  --amber:#d97706;--amber-bg:rgba(217,119,6,0.1);
+  --purple:#7c3aed;--purple-bg:rgba(124,58,237,0.1);
+  --r:12px;--rs:8px;
+}
+body.dark{
+  --bg:#0a0e1a;--surface:#111827;--surface2:#1a2235;--border:rgba(255,255,255,0.08);
+  --border2:rgba(255,255,255,0.18);--text:#f0f4ff;--muted:#8892a4;
+  --accent:#3b82f6;--accent-bg:rgba(59,130,246,0.13);
+  --green:#22c55e;--green-bg:rgba(34,197,94,0.13);
+  --red:#ef4444;--red-bg:rgba(239,68,68,0.13);
+  --amber:#f59e0b;--amber-bg:rgba(245,158,11,0.13);
+  --purple:#a78bfa;--purple-bg:rgba(167,139,250,0.13);
+}
+.theme-toggle{background:var(--surface2);border:1px solid var(--border2);border-radius:20px;padding:5px 10px;font-size:13px;cursor:pointer;-webkit-user-select:none;color:var(--muted);display:flex;align-items:center;gap:5px;font-family:'DM Sans',sans-serif;font-weight:500;}
+.theme-toggle:active{opacity:0.7;}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;padding-bottom:calc(30px + env(safe-area-inset-bottom));}
+
+.app-header{background:var(--surface);border-bottom:1px solid var(--border);padding:11px 16px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;box-shadow:0 1px 4px rgba(0,0,0,0.06);}
+.app-title{font-size:15px;font-weight:600;color:var(--text);}
+.app-sub{font-size:11px;color:var(--muted);margin-top:1px;}
+.badge{font-size:10px;font-weight:600;padding:3px 9px;border-radius:20px;text-transform:uppercase;letter-spacing:0.4px;}
+.badge-idle{background:var(--surface2);color:var(--muted);}
+.badge-live{background:var(--red-bg);color:var(--red);animation:pulse 2s infinite;}
+.badge-paused{background:var(--amber-bg);color:var(--amber);}
+.badge-to{background:var(--purple-bg);color:var(--purple);animation:pulse 1.5s infinite;}
+.badge-done{background:var(--green-bg);color:var(--green);}
+@keyframes pulse{0%,100%{opacity:1;}50%{opacity:0.45;}}
+
+.tab-bar{display:flex;background:var(--surface);border-bottom:1px solid var(--border);overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;box-shadow:0 1px 3px rgba(0,0,0,0.04);}
+.tab-bar::-webkit-scrollbar{display:none;}
+.tab{flex:none;padding:11px 14px;font-size:12px;font-weight:500;color:var(--muted);background:none;border:none;border-bottom:2px solid transparent;cursor:pointer;font-family:'DM Sans',sans-serif;white-space:nowrap;}
+.tab.active{color:var(--accent);border-bottom-color:var(--accent);}
+
+.screen{display:none;padding:12px 14px;}
+.screen.active{display:block;}
+
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:12px 14px;margin-bottom:10px;box-shadow:0 1px 3px rgba(0,0,0,0.04);}
+.sec-label{font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:8px;}
+
+input[type=text],input[type=date],input[type=time],select{width:100%;background:var(--surface2);border:1px solid var(--border2);border-radius:var(--rs);color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;padding:10px 12px;outline:none;-webkit-appearance:none;appearance:none;}
+input[type=date]::-webkit-calendar-picker-indicator,input[type=time]::-webkit-calendar-picker-indicator{filter:none;opacity:0.5;}
+input:focus,select:focus{border-color:var(--accent);}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.field{margin-bottom:10px;}
+.field-label{font-size:11px;color:var(--muted);font-weight:500;margin-bottom:4px;}
+
+.btn{padding:10px 12px;border-radius:var(--rs);font-size:13px;font-weight:600;border:1px solid var(--border2);background:var(--surface2);color:var(--text);cursor:pointer;font-family:'DM Sans',sans-serif;text-align:center;-webkit-user-select:none;transition:opacity 0.1s;}
+.btn:active{opacity:0.6;transform:scale(0.96);}
+.btn-primary{background:var(--accent);border-color:var(--accent);color:#fff;}
+.btn-green{background:var(--green-bg);border-color:rgba(22,163,74,0.35);color:var(--green);}
+.btn-red{color:var(--red);border-color:rgba(220,38,38,0.35);}
+.btn-amber{color:var(--amber);border-color:rgba(217,119,6,0.35);}
+.btn-purple{background:var(--purple-bg);border-color:rgba(124,58,237,0.35);color:var(--purple);}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;}
+
+/* TIMER */
+.timer-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
+.timer{font-family:'DM Mono',monospace;font-size:44px;font-weight:500;letter-spacing:-2px;line-height:1;color:var(--text);}
+.timer.warn{color:var(--amber);}
+.timer.urgent{color:var(--red);animation:pulse 0.8s infinite;}
+.q-bar{display:flex;gap:5px;}
+.q-btn{width:37px;height:30px;font-size:12px;font-weight:600;border:1px solid var(--border2);border-radius:var(--rs);background:var(--surface2);color:var(--muted);cursor:pointer;font-family:'DM Sans',sans-serif;}
+.q-btn.active{background:var(--accent-bg);color:var(--accent);border-color:var(--accent);}
+.q-btn.done{background:var(--green-bg);color:var(--green);border-color:rgba(22,163,74,0.4);}
+.game-meta-line{font-size:12px;color:var(--muted);margin-bottom:10px;}
+.to-banner{background:var(--purple-bg);border:1px solid rgba(124,58,237,0.35);border-radius:var(--rs);padding:7px 12px;font-size:13px;color:var(--purple);font-weight:600;text-align:center;margin-bottom:8px;display:none;}
+
+/* STARTER GRID */
+.starter-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;}
+.starter-item{background:var(--surface2);border:1px solid var(--border);border-radius:var(--rs);padding:10px 12px;display:flex;align-items:center;gap:8px;cursor:pointer;-webkit-user-select:none;transition:all 0.1s;}
+.starter-item:active{transform:scale(0.96);}
+.starter-item.selected{background:var(--green-bg);border-color:rgba(22,163,74,0.4);}
+.starter-dot{width:20px;height:20px;border-radius:50%;border:1.5px solid var(--border2);background:var(--surface);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:12px;color:transparent;}
+.starter-item.selected .starter-dot{background:var(--green);border-color:var(--green);color:#fff;}
+.starter-num{font-size:10px;color:var(--muted);font-family:'DM Mono',monospace;}
+.starter-item.selected .starter-num{color:var(--green);}
+.starter-name{font-size:13px;font-weight:500;color:var(--text);}
+.starter-item.selected .starter-name{color:var(--green);}
+.starter-count{font-size:12px;color:var(--muted);text-align:center;margin-bottom:8px;}
+.starter-count strong{color:var(--text);}
+.warn-starters{background:var(--amber-bg);border:1px solid rgba(217,119,6,0.3);border-radius:var(--rs);padding:8px 12px;font-size:12px;color:var(--amber);margin-bottom:8px;display:none;}
+
+/* ON COURT */
+.oncourt-empty{font-size:12px;color:var(--muted);}
+.warn-bar{background:var(--amber-bg);border:1px solid rgba(217,119,6,0.3);border-radius:var(--rs);padding:7px 10px;font-size:12px;color:var(--amber);margin-bottom:8px;display:none;}
+.on-count{font-size:11px;color:var(--muted);}
+/* side-by-side court + action */
+.court-action-row{display:grid;grid-template-columns:1fr 1.7fr;gap:8px;margin-bottom:10px;align-items:start;}
+.court-card{padding:10px 10px;}
+.action-card{padding:10px 10px;}
+/* vertical player list */
+.court-player-row{display:flex;align-items:center;gap:6px;padding:7px 0;border-bottom:1px solid var(--border);-webkit-user-select:none;}
+.court-player-row:last-child{border-bottom:none;}
+.court-p-num{font-size:10px;color:var(--muted);font-family:'DM Mono',monospace;min-width:24px;flex-shrink:0;}
+.court-player-row.selected .court-p-num{color:var(--accent);}
+.court-p-name{font-size:13px;font-weight:500;color:var(--text);flex:1;}
+.court-player-row.selected .court-p-name{color:var(--accent);font-weight:600;}
+.court-sel-btn{font-size:11px;font-weight:600;padding:5px 10px;border-radius:6px;border:1px solid var(--border2);background:var(--surface2);color:var(--muted);cursor:pointer;-webkit-user-select:none;white-space:nowrap;font-family:'DM Sans',sans-serif;flex-shrink:0;}
+.court-player-row.selected .court-sel-btn{background:var(--accent);border-color:var(--accent);color:#fff;}
+.court-sel-btn:active{transform:scale(0.88);}
+/* selected player bar in action panel */
+.spb-bar{display:flex;align-items:center;justify-content:space-between;background:var(--accent-bg);border:1px solid rgba(59,130,246,0.3);border-radius:var(--rs);padding:7px 10px;margin-bottom:8px;}
+.spb-name{font-size:13px;font-weight:600;color:var(--accent);}
+.spb-clear{font-size:12px;color:var(--muted);cursor:pointer;padding:2px 4px;}
+/* action grid 2 col */
+.action-grid-v{display:grid;grid-template-columns:1fr 1fr;gap:5px;}
+.action-grid-v .action-btn{padding:11px 4px;font-size:12px;}
+.action-grid-v .action-btn .abl{font-size:9px;}
+
+/* BENCH QUICK-SUB */
+.bench-section{margin-top:10px;padding-top:10px;border-top:1px solid var(--border);}
+.bench-label{font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.6px;margin-bottom:6px;}
+.bench-grid{display:flex;gap:6px;flex-wrap:wrap;}
+.bench-pill{background:var(--surface2);border:1px solid var(--border2);border-radius:20px;padding:6px 12px;font-size:13px;font-weight:500;color:var(--muted);cursor:pointer;-webkit-user-select:none;transition:all 0.1s;}
+.bench-pill:active{transform:scale(0.93);background:var(--accent-bg);color:var(--accent);}
+
+/* ACTION PANEL */
+.selected-player-bar{background:var(--accent-bg);border:1px solid rgba(59,130,246,0.3);border-radius:var(--rs);padding:9px 12px;display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
+.spb-name{font-size:15px;font-weight:600;color:var(--accent);}
+.spb-clear{font-size:12px;color:var(--muted);cursor:pointer;padding:2px 6px;}
+.action-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
+.action-btn{padding:14px 6px;border-radius:var(--rs);font-size:14px;font-weight:600;border:1px solid var(--border2);background:var(--surface2);color:var(--text);cursor:pointer;font-family:'DM Sans',sans-serif;text-align:center;-webkit-user-select:none;display:flex;flex-direction:column;align-items:center;gap:3px;}
+.action-btn:active{transform:scale(0.92);opacity:0.7;}
+.action-btn .abl{font-size:10px;color:var(--muted);font-weight:500;}
+.action-btn.pts1{background:rgba(22,163,74,0.08);border-color:rgba(22,163,74,0.35);color:var(--green);}
+.action-btn.pts2{background:rgba(22,163,74,0.13);border-color:rgba(22,163,74,0.45);color:var(--green);}
+.action-btn.pts3{background:rgba(22,163,74,0.18);border-color:rgba(22,163,74,0.55);color:var(--green);}
+.action-btn.miss{color:var(--muted);}
+.action-btn.tov{background:var(--red-bg);border-color:rgba(220,38,38,0.3);color:var(--red);}
+.action-btn.foul-btn{background:var(--amber-bg);border-color:rgba(217,119,6,0.35);color:var(--amber);}
+.action-btn.undo-btn{border-color:rgba(217,119,6,0.3);color:var(--amber);}
+.no-player-msg{font-size:13px;color:var(--muted);text-align:center;padding:16px 0;}
+.last-action-bar{font-size:12px;color:var(--muted);padding:7px 10px;background:var(--surface2);border-radius:var(--rs);margin-top:8px;min-height:32px;}
+
+/* SCORES */
+.scores-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;}
+.score-side{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:12px;box-shadow:0 1px 3px rgba(0,0,0,0.04);}
+.score-side-label{font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;}
+.score-num{font-family:'DM Mono',monospace;font-size:40px;font-weight:500;line-height:1;margin-bottom:10px;}
+.score-num.home{color:var(--green);}
+.score-num.away{color:var(--red);}
+.pts-row{display:flex;gap:5px;}
+.pts-btn{flex:1;padding:11px 4px;border-radius:var(--rs);font-size:14px;font-weight:600;border:1px solid var(--border2);background:var(--surface2);color:var(--text);cursor:pointer;font-family:'DM Sans',sans-serif;text-align:center;-webkit-user-select:none;}
+.pts-btn:active{transform:scale(0.92);opacity:0.7;}
+.pts-btn.home{border-color:rgba(22,163,74,0.4);color:var(--green);}
+.pts-btn.away{border-color:rgba(220,38,38,0.4);color:var(--red);}
+.undo-score{font-size:11px;color:var(--muted);text-align:center;margin-top:6px;cursor:pointer;}
+.auto-tag{font-size:10px;color:var(--green);background:var(--green-bg);border-radius:4px;padding:2px 5px;margin-left:4px;}
+
+/* ROSTER TABLE */
+.roster-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;}
+.rtbl{width:100%;border-collapse:collapse;font-size:12px;}
+.rtbl th{text-align:right;padding:5px 4px;color:var(--muted);font-size:10px;font-weight:600;text-transform:uppercase;border-bottom:1px solid var(--border);white-space:nowrap;}
+.rtbl th:first-child{text-align:left;min-width:110px;}
+.rtbl td{padding:8px 4px;border-bottom:1px solid var(--border);text-align:right;color:var(--text);font-variant-numeric:tabular-nums;white-space:nowrap;}
+.rtbl td:first-child{text-align:left;}
+.rtbl tr:last-child td{border-bottom:none;}
+.rtbl tr.on-row{background:rgba(22,163,74,0.04);}
+.rtbl tr.on-row td:first-child{color:var(--green);}
+.pname-cell{display:flex;align-items:center;gap:6px;}
+.pnum-tag{font-size:10px;color:var(--muted);font-family:'DM Mono',monospace;}
+.rtbl tr.on-row .pnum-tag{color:var(--green);}
+.mins-cell{font-family:'DM Mono',monospace;font-size:11px;}
+.fgm-val{color:#2563eb;}
+.tov-val{color:var(--red);}
+.sub-toggle{width:22px;height:22px;border-radius:50%;border:1.5px solid var(--border2);background:var(--surface2);display:inline-flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;}
+.sub-toggle.on{background:var(--green);border-color:var(--green);}
+.sub-dot{width:6px;height:6px;border-radius:50%;background:var(--muted);}
+.sub-toggle.on .sub-dot{background:#fff;}
+
+/* TIMELINE */
+.tl-controls{display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap;}
+.tl-game-sel{flex:1;min-width:0;}
+.tl-export-btn{font-size:12px;color:var(--accent);cursor:pointer;padding:9px 12px;border:1px solid rgba(59,130,246,0.35);border-radius:var(--rs);background:var(--accent-bg);font-weight:600;white-space:nowrap;-webkit-user-select:none;}
+.tl-game-info{font-size:12px;color:var(--muted);margin-bottom:12px;}
+.tl-empty{font-size:13px;color:var(--muted);text-align:center;padding:24px 0;}
+.tl-quarter-block{margin-bottom:16px;}
+.tl-q-label{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid var(--border);}
+.tl-event{display:flex;align-items:flex-start;gap:10px;padding:7px 0;border-bottom:1px solid rgba(0,0,0,0.04);}
+.tl-event:last-child{border-bottom:none;}
+.tl-time{font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);min-width:38px;padding-top:6px;}
+.tl-icon{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0;}
+/* Consistent icon backgrounds */
+.tl-icon.pts{background:rgba(22,163,74,0.12);}
+.tl-icon.opp{background:rgba(220,38,38,0.12);}
+.tl-icon.stat{background:rgba(59,130,246,0.12);}
+.tl-icon.sub{background:rgba(217,119,6,0.12);}
+.tl-icon.timeout{background:rgba(124,58,237,0.12);}
+.tl-icon.system{background:rgba(107,122,153,0.12);}
+.tl-icon.foul{background:rgba(217,119,6,0.12);}
+.tl-body{flex:1;}
+.tl-title{font-size:13px;font-weight:500;color:var(--text);line-height:1.4;}
+.tl-sub-text{font-size:11px;color:var(--muted);margin-top:1px;}
+.tl-score-badge{font-size:11px;font-weight:600;font-family:'DM Mono',monospace;color:var(--green);background:var(--green-bg);padding:2px 7px;border-radius:4px;margin-left:6px;}
+.tl-score-badge.opp{color:var(--red);background:var(--red-bg);}
+
+/* SEASON */
+.tbl-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;}
+table.stbl{width:100%;border-collapse:collapse;font-size:12px;min-width:300px;}
+table.stbl th{text-align:right;padding:5px 5px;color:var(--muted);font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.4px;border-bottom:1px solid var(--border);white-space:nowrap;}
+table.stbl th:first-child{text-align:left;}
+table.stbl td{padding:8px 5px;border-bottom:1px solid var(--border);text-align:right;color:var(--text);font-variant-numeric:tabular-nums;white-space:nowrap;}
+table.stbl td:first-child{text-align:left;font-weight:500;}
+.bar-bg{background:var(--surface2);border-radius:3px;height:5px;margin-top:3px;width:44px;}
+.bar-fill{height:5px;border-radius:3px;}
+.game-result{font-size:12px;font-weight:600;padding:3px 8px;border-radius:5px;}
+.result-w{background:var(--green-bg);color:var(--green);}
+.result-l{background:var(--red-bg);color:var(--red);}
+.result-d{background:var(--amber-bg);color:var(--amber);}
+.gli-edit{font-size:11px;color:var(--accent);cursor:pointer;padding:3px 6px;}
+
+/* PlayHQ-style round cards */
+.round-block{margin-bottom:14px;}
+.round-header{background:var(--accent);color:#fff;border-radius:var(--r) var(--r) 0 0;padding:10px 14px;}
+.round-header-title{font-size:14px;font-weight:700;letter-spacing:0.2px;}
+.round-header-date{font-size:12px;opacity:0.85;margin-top:2px;}
+.game-card{background:var(--surface);border:1px solid var(--border);border-top:none;border-radius:0 0 var(--r) var(--r);padding:14px;cursor:pointer;transition:background 0.1s;}
+.game-card:active{background:var(--surface2);}
+.game-card-teams{display:flex;align-items:stretch;gap:10px;margin-bottom:10px;}
+.game-card-names{flex:1;display:flex;flex-direction:column;justify-content:space-between;gap:8px;}
+.team-row{display:flex;align-items:center;gap:8px;}
+.team-badge{width:28px;height:28px;border-radius:50%;background:var(--accent-bg);border:1px solid rgba(59,130,246,0.2);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:var(--accent);flex-shrink:0;}
+.team-badge.opp{background:var(--surface2);border-color:var(--border2);color:var(--muted);}
+.team-name{font-size:14px;font-weight:600;color:var(--text);}
+.team-name.opp{font-weight:500;color:var(--muted);}
+.game-card-scores{display:flex;flex-direction:column;justify-content:space-between;align-items:center;gap:8px;min-width:44px;}
+.team-score{font-family:'DM Mono',monospace;font-size:22px;font-weight:700;color:var(--text);line-height:1;}
+.team-score.winner{color:var(--green);}
+.score-divider{font-size:10px;font-weight:700;color:var(--muted);background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:2px 6px;text-transform:uppercase;}
+.game-card-meta{display:flex;flex-wrap:wrap;gap:8px;padding-top:10px;border-top:1px solid var(--border);}
+.meta-item{display:flex;align-items:center;gap:4px;font-size:12px;color:var(--muted);}
+.game-card-footer{display:flex;align-items:center;justify-content:space-between;margin-top:8px;}
+.margin-text{font-size:12px;color:var(--muted);font-style:italic;}
+.sv-btn-active{background:var(--accent);border-color:var(--accent);color:#fff;}
+
+/* EDIT MODAL */
+.modal-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:200;display:none;align-items:flex-start;justify-content:center;padding:16px;overflow-y:auto;}
+.modal-overlay.visible{display:flex;}
+.modal{background:var(--surface);border:1px solid var(--border2);border-radius:var(--r);padding:16px;width:100%;max-width:500px;margin-top:20px;box-shadow:0 8px 32px rgba(0,0,0,0.15);}
+.modal-title{font-size:15px;font-weight:600;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;color:var(--text);}
+.modal-close{font-size:20px;color:var(--muted);cursor:pointer;line-height:1;}
+.edit-tbl{width:100%;border-collapse:collapse;font-size:12px;}
+.edit-tbl th{text-align:right;padding:5px 4px;color:var(--muted);font-size:10px;font-weight:600;border-bottom:1px solid var(--border);}
+.edit-tbl th:first-child{text-align:left;}
+.edit-tbl td{padding:4px 3px;border-bottom:1px solid var(--border);vertical-align:middle;}
+.edit-tbl td:first-child{font-size:11px;font-weight:500;white-space:nowrap;color:var(--text);}
+.edit-input{width:40px;background:var(--surface2);border:1px solid var(--border2);border-radius:5px;color:var(--text);font-family:'DM Mono',monospace;font-size:12px;padding:4px;text-align:center;outline:none;}
+.edit-input:focus{border-color:var(--accent);}
+
+/* SQUAD */
+.setup-row{display:flex;gap:6px;align-items:center;margin-bottom:7px;}
+.setup-row input:first-child{width:56px;flex:none;}
+.backup-info{font-size:12px;color:var(--muted);line-height:1.6;margin-bottom:10px;}
+</style>
+</head>
+<body>
+
+<div class="app-header">
+  <div><div class="app-title">Eltham Wildcats U12</div><div class="app-sub">Rep tracker</div></div>
+  <div style="display:flex;align-items:center;gap:8px;">
+    <button class="theme-toggle" id="theme-toggle" onclick="toggleTheme()">☀️ Light</button>
+    <span class="badge badge-idle" id="status-badge">Idle</span>
+  </div>
+</div>
+
+<div class="tab-bar">
+  <button class="tab active" id="tab-btn-pregame" onclick="showScreen('pregame',this)">Game Setup</button>
+  <button class="tab" id="tab-btn-game" onclick="showScreen('game',this)">Game</button>
+  <button class="tab" id="tab-btn-timeline" onclick="showScreen('timeline',this)">Timeline</button>
+  <button class="tab" id="tab-btn-season" onclick="showScreen('season',this)">Season</button>
+  <button class="tab" id="tab-btn-squad" onclick="showScreen('squad',this)">Squad</button>
+</div>
+
+<!-- ═══ PREGAME ═══ -->
+<div id="screen-pregame" class="screen active">
+  <div class="card">
+    <div class="sec-label">Game details</div>
+    <div class="two-col">
+      <div class="field"><div class="field-label">Date</div><input type="date" id="g-date"/></div>
+      <div class="field"><div class="field-label">Game time</div><input type="time" id="g-time"/></div>
+    </div>
+    <div class="field"><div class="field-label">Round</div><input type="text" id="g-round" placeholder="e.g. 11"/></div>
+    <div class="field"><div class="field-label">Opposition</div><input type="text" id="g-opp" placeholder="e.g. Heidelberg"/></div>
+    <div class="field"><div class="field-label">Location / Venue</div><input type="text" id="g-venue" placeholder="e.g. Eltham High School / Court 1"/></div>
+  </div>
+  <div class="card">
+    <div class="sec-label">Starting 5</div>
+    <div class="starter-count">Selected: <strong id="starter-count">0</strong>/5</div>
+    <div class="warn-starters" id="warn-starters">⚠ Select at least 1 starter before starting the game</div>
+    <div class="starter-grid" id="starter-grid"></div>
+  </div>
+  <button class="btn btn-primary" style="width:100%;padding:14px;" onclick="startGame()">Start game</button>
+</div>
+
+<!-- ═══ GAME ═══ -->
+<div id="screen-game" class="screen">
+  <div class="card">
+    <div class="timer-row">
+      <div>
+        <div id="game-timer" class="timer">10:00</div>
+        <div class="game-meta-line" id="game-meta">—</div>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:7px;">
+        <div class="q-bar">
+          <button class="q-btn" id="q1" onclick="setQuarter(1)">Q1</button>
+          <button class="q-btn" id="q2" onclick="setQuarter(2)">Q2</button>
+          <button class="q-btn" id="q3" onclick="setQuarter(3)">Q3</button>
+          <button class="q-btn" id="q4" onclick="setQuarter(4)">Q4</button>
+        </div>
+      </div>
+    </div>
+    <div class="g3" style="margin-bottom:8px;">
+      <button class="btn btn-primary" id="pause-btn" onclick="togglePause()">Pause</button>
+      <button class="btn btn-amber" onclick="resetQClock()">Reset Q</button>
+      <button class="btn btn-red" onclick="endGame()">End game</button>
+    </div>
+    <div class="g2">
+      <button class="btn btn-green" onclick="callTimeout('Eltham')">Eltham T/O</button>
+      <button class="btn btn-purple" onclick="callTimeout('Opposition')">Opp T/O</button>
+    </div>
+  </div>
+  <div class="to-banner" id="to-banner">TIMEOUT — <span id="to-team"></span></div>
+
+  <!-- S2 + S3: ON COURT (left) + ACTION (right) side by side -->
+  <div class="warn-bar" id="warn5">5 players on court — sub someone off first</div>
+  <div class="court-action-row">
+
+    <!-- LEFT: on court vertical list -->
+    <div class="card court-card">
+      <div class="sec-label">On court</div>
+      <div id="oncourt-list"><span class="oncourt-empty">No players</span></div>
+      <div class="on-count" id="on-count" style="margin-top:8px;">0/5</div>
+    </div>
+
+    <!-- RIGHT: action panel -->
+    <div class="card action-card">
+      <div class="sec-label">Action</div>
+      <div id="action-no-player" class="no-player-msg" style="padding:12px 0;font-size:12px;">← Select a player</div>
+      <div id="action-panel" style="display:none;">
+        <div class="spb-bar">
+          <div class="spb-name" id="spb-name"></div>
+          <div class="spb-clear" onclick="deselectPlayer()">✕</div>
+        </div>
+        <div class="action-grid-v">
+          <button class="action-btn pts1" onclick="logAction('1pt')">+1<div class="abl">FT made</div></button>
+          <button class="action-btn miss" onclick="logAction('ft_miss')">FT-X<div class="abl">FT missed</div></button>
+          <button class="action-btn pts2" onclick="logAction('2pt')">+2<div class="abl">Field goal</div></button>
+          <button class="action-btn pts3" onclick="logAction('3pt')">+3<div class="abl">3-pointer</div></button>
+          <button class="action-btn miss" onclick="logAction('fga')">FGA<div class="abl">Missed shot</div></button>
+          <button class="action-btn" onclick="logAction('ast')">AST<div class="abl">Assist</div></button>
+          <button class="action-btn" onclick="logAction('reb')">REB<div class="abl">Rebound</div></button>
+          <button class="action-btn" onclick="logAction('stl')">STL<div class="abl">Steal</div></button>
+          <button class="action-btn" onclick="logAction('blk')">BLK<div class="abl">Block</div></button>
+          <button class="action-btn tov" onclick="logAction('tov')">TO<div class="abl">Turnover</div></button>
+          <button class="action-btn foul-btn" onclick="logAction('foul')">FOUL<div class="abl">Personal foul</div></button>
+          <button class="action-btn undo-btn" onclick="undoAction()" style="grid-column:1/-1;flex-direction:row;gap:4px;padding:9px 6px;font-size:12px;">↩ Undo last</button>
+        </div>
+        <div class="last-action-bar" id="last-action">—</div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- S4+S5: SCORES -->
+  <div class="scores-row">
+    <div class="score-side">
+      <div style="display:flex;align-items:center;margin-bottom:4px;">
+        <div class="score-side-label">Eltham</div><span class="auto-tag">auto</span>
+      </div>
+      <div class="score-num home" id="score-home">0</div>
+      <div style="font-size:11px;color:var(--muted);">from scoring above</div>
+    </div>
+    <div class="score-side">
+      <div class="score-side-label" id="score-opp-label">Opponent</div>
+      <div class="score-num away" id="score-away">0</div>
+      <div class="pts-row">
+        <button class="pts-btn away" onclick="addOppScore(1)">+1</button>
+        <button class="pts-btn away" onclick="addOppScore(2)">+2</button>
+        <button class="pts-btn away" onclick="addOppScore(3)">+3</button>
+      </div>
+      <div class="undo-score" onclick="undoOppScore()">↩ undo</div>
+    </div>
+  </div>
+
+  <!-- S6: ROSTER -->
+  <div class="card" style="padding:10px 0;">
+    <div class="sec-label" style="padding:0 14px 6px;">All players <span style="font-weight:400;text-transform:none;letter-spacing:0;font-size:11px;color:var(--muted);">— tap ● to sub on/off</span></div>
+    <div class="roster-wrap">
+      <table class="rtbl">
+        <thead><tr><th>Player</th><th>MIN</th><th>FTM</th><th>FTA</th><th>FGM</th><th>FGA</th><th>FG%</th><th>AST</th><th>REB</th><th>STL</th><th>BLK</th><th>TO</th><th>FL</th></tr></thead>
+        <tbody id="roster-body"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ TIMELINE ═══ -->
+<div id="screen-timeline" class="screen">
+  <div class="card">
+    <div class="tl-controls">
+      <select class="tl-game-sel" id="tl-game-sel" onchange="renderTimeline()">
+        <option value="live">Current game</option>
+      </select>
+      <div class="tl-export-btn" onclick="exportTimeline()">⬇ Export</div>
+    </div>
+    <div class="tl-game-info" id="tl-game-info"></div>
+    <div id="tl-content"><div class="tl-empty">No events yet</div></div>
+  </div>
+</div>
+
+<!-- ═══ SEASON ═══ -->
+<div id="screen-season" class="screen">
+  <!-- season view toggle -->
+  <div style="display:flex;gap:6px;margin-bottom:10px;">
+    <button class="btn" id="sv-results-btn" onclick="setSeasonView('results')" style="flex:1;">Results</button>
+    <button class="btn" id="sv-stats-btn" onclick="setSeasonView('stats')" style="flex:1;">Player Stats</button>
+    <button class="btn" id="sv-mins-btn" onclick="setSeasonView('mins')" style="flex:1;">Minutes</button>
+  </div>
+
+  <!-- RESULTS VIEW -->
+  <div id="sv-results">
+    <div id="season-results-list"><div style="font-size:13px;color:var(--muted);padding:16px 0;">No games yet</div></div>
+  </div>
+
+  <!-- PLAYER STATS VIEW -->
+  <div id="sv-stats" style="display:none;">
+    <div class="card">
+      <div class="sec-label">Season stats</div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:8px;"><span id="game-count">0</span> games played</div>
+      <div class="tbl-wrap">
+        <table class="stbl"><thead><tr><th style="min-width:100px;">Player</th><th>PTS</th><th>FTM</th><th>FTA</th><th>FGM</th><th>FGA</th><th>FG%</th><th>AST</th><th>REB</th><th>STL</th><th>BLK</th><th>TO</th><th>FL</th></tr></thead><tbody id="season-stats-body"></tbody></table>
+      </div>
+    </div>
+  </div>
+
+  <!-- MINUTES VIEW -->
+  <div id="sv-mins" style="display:none;">
+    <div class="card">
+      <div class="sec-label">Season minutes</div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:10px;">Fair share: <strong style="color:var(--text);" id="fair-share">—</strong> min/game</div>
+      <div class="tbl-wrap">
+        <table class="stbl"><thead><tr><th style="min-width:100px;">Player</th><th>Total</th><th>Avg/g</th><th>vs fair</th></tr></thead><tbody id="season-mins-body"></tbody></table>
+      </div>
+    </div>
+  </div>
+
+  <!-- GAME DETAIL PANEL (shown when a game is tapped) -->
+  <div id="game-detail-panel" style="display:none;">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+      <button class="btn" onclick="closeGameDetail()" style="padding:7px 12px;">← Back</button>
+      <div style="font-size:14px;font-weight:600;" id="gdp-title"></div>
+    </div>
+    <div id="gdp-content"></div>
+  </div>
+</div>
+
+<!-- ═══ SQUAD ═══ -->
+<div id="screen-squad" class="screen">
+  <div class="card"><div class="sec-label">Squad</div><div id="player-list-setup"></div>
+    <div style="display:flex;gap:6px;align-items:center;margin-top:8px;">
+      <input type="text" id="new-num" placeholder="#" style="width:56px;"/>
+      <input type="text" id="new-name" placeholder="Player name"/>
+      <button class="btn btn-primary" style="padding:9px 14px;white-space:nowrap;" onclick="addPlayer()">Add</button>
+    </div>
+  </div>
+  <div class="card">
+    <div class="sec-label">Backup & restore</div>
+    <div class="backup-info">Export data after every game. Restore loads it back if needed.</div>
+    <div class="g2" style="margin-bottom:8px;">
+      <button class="btn btn-green" onclick="pushAllToCloud()">☁ Sync all to cloud</button>
+      <button class="btn btn-green" onclick="pullFromCloud()">↓ Pull from cloud</button>
+    </div>
+    <div class="g2">
+      <button class="btn" onclick="exportData()">Export JSON backup</button>
+      <button class="btn" onclick="document.getElementById('import-file').click()">Restore backup</button>
+    </div>
+    <input type="file" id="import-file" accept=".json" style="display:none;" onchange="importData(event)"/>
+  </div>
+  <div class="card"><div class="sec-label">Danger zone</div><button class="btn btn-red" style="width:100%;" onclick="clearAll()">Clear all game data</button></div>
+</div>
+
+<!-- EDIT MODAL -->
+<div class="modal-overlay" id="edit-modal">
+  <div class="modal">
+    <div class="modal-title"><span id="edit-modal-title">Edit game</span><span class="modal-close" onclick="closeEditModal()">✕</span></div>
+    <div id="edit-modal-body"></div>
+    <div style="display:flex;gap:8px;margin-top:14px;">
+      <button class="btn btn-primary" style="flex:1;" onclick="saveEditModal()">Save</button>
+      <button class="btn" style="flex:1;" onclick="closeEditModal()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const SK='wildcats_v10';
+const SB_URL='https://pccmmceqvlxjndphpybj.supabase.co';
+const SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBjY21tY2Vxdmx4am5kcGhweWJqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAwNTU5NDcsImV4cCI6MjA5NTYzMTk0N30.tAvIg2hRQkfvZ2Uc8nSWU0NyiNJ4MOJAqMKPx4Bk6kY';
+
+// Supabase helpers
+async function sbFetch(path, options={}){
+  const res = await fetch(SB_URL+'/rest/v1/'+path, {
+    ...options,
+    headers:{
+      'apikey': SB_KEY,
+      'Authorization': 'Bearer '+SB_KEY,
+      'Content-Type': 'application/json',
+      'Prefer': options.prefer||'',
+      ...options.headers
+    }
+  });
+  if(!res.ok){const t=await res.text();console.error('Supabase error:',t);return null;}
+  const text=await res.text();
+  return text?JSON.parse(text):null;
+}
+
+async function sbSaveGame(game){
+  // upsert by game id
+  return await sbFetch('games?on_conflict=game_id',{
+    method:'POST',
+    prefer:'resolution=merge-duplicates',
+    headers:{'Prefer':'resolution=merge-duplicates'},
+    body: JSON.stringify({
+      game_id: String(game.id),
+      team: 'eltham_u12_wildcats',
+      data: JSON.stringify(game)
+    })
+  });
+}
+
+async function sbLoadGames(){
+  const rows = await sbFetch('games?team=eq.eltham_u12_wildcats&order=game_id.desc&select=*');
+  if(!rows)return[];
+  return rows.map(r=>typeof r.data==='string'?JSON.parse(r.data):r.data);
+}
+
+async function sbDeleteGame(gameId){
+  return await sbFetch('games?game_id=eq.'+String(gameId),{method:'DELETE'});
+}
+const Q_SECS=600;
+const SQUAD=[
+  {id:4, num:'#4', name:'Elara Jewell'},
+  {id:6, num:'#6', name:'Grace Burslem'},
+  {id:8, num:'#8', name:'Evie Davis'},
+  {id:10,num:'#10',name:'Quinn Cukier'},
+  {id:13,num:'#13',name:'Emilia Wynne'},
+  {id:15,num:'#15',name:'Madeline Hadley'},
+  {id:21,num:'#21',name:'Ellie Spithill'},
+  {id:22,num:'#22',name:'Harper Bolton'},
+  {id:23,num:'#23',name:"Zoe O'Connell"},
+  {id:33,num:'#33',name:'Eva Leverton'}
+];
+
+// Consistent icon map — all stats use same ● icon, only category differs by color class
+const TL_ICONS={
+  pts_1:'🎯', pts_2:'🏀', pts_3:'🔥', pts:'🏀',
+  opp_pts:'⚡',
+  sub_on:'⬆️', sub_off:'⬇️',
+  timeout:'🟢', opp_timeout:'🔴',
+  fga:'❌', ft_miss:'✕', ast:'👐', reb:'💪', stl:'✋', blk:'🚫', tov:'🔄', foul:'🟡',
+  qend:'🔔', start:'🏁'
+};
+const TL_CLASS={
+  pts_1:'pts', pts_2:'pts', pts_3:'pts', pts:'pts', opp_pts:'opp',
+  sub_on:'sub', sub_off:'sub',
+  timeout:'timeout', opp_timeout:'timeout',
+  fga:'stat', ft_miss:'stat', ast:'stat', reb:'stat', stl:'stat', blk:'stat', tov:'stat', foul:'foul',
+  qend:'system', start:'system'
+};
+
+let state={players:[],games:[],currentGame:null};
+let timerInterval=null;
+let wakeLock=null;
+let actionLog=[];    // {pid, type, pts, tlIdx}
+let oppScoreLog=[];  // {pts, tlIdx}
+let selectedPid=null;
+let editingGameIdx=null;
+let pendingStarters=new Set();
+
+function emptyStats(){return{fgm:0,fga:0,ftm:0,fta:0,ast:0,reb:0,stl:0,blk:0,tov:0,foul:0,pts:0};}
+
+function save(){
+  try{
+    const s={...state,_starters:[...pendingStarters]};
+    localStorage.setItem(SK,JSON.stringify(s));
+  }catch(e){}
+}
+
+async function syncGameToCloud(game){
+  try{
+    const result=await sbSaveGame(game);
+    if(result!==null){showSyncBadge('checkmark Saved to cloud');}
+    else{showSyncBadge('warn Cloud sync failed');}
+  }catch(e){showSyncBadge('warn Cloud sync failed');console.error('Sync error:',e);}
+}
+
+async function loadGamesFromCloud(){
+  try{
+    const cloudGames=await sbLoadGames();
+    if(!cloudGames||cloudGames.length===0)return false;
+    const localIds=new Set(state.games.map(g=>String(g.id)));
+    const newGames=cloudGames.filter(g=>!localIds.has(String(g.id)));
+    if(newGames.length>0){
+      state.games=[...state.games,...newGames];
+      state.games.sort((a,b)=>parseDateStr(b.date)-parseDateStr(a.date));
+      save();return true;
+    }
+    return false;
+  }catch(e){console.error('Cloud load error:',e);return false;}
+}
+
+function showSyncBadge(msg){
+  let badge=document.getElementById('sync-badge');
+  if(!badge){
+    badge=document.createElement('div');
+    badge.id='sync-badge';
+    badge.style.cssText='position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--surface);border:1px solid var(--border2);border-radius:20px;padding:7px 16px;font-size:13px;font-weight:500;color:var(--text);box-shadow:0 4px 16px rgba(0,0,0,0.15);z-index:999;transition:opacity 0.4s;white-space:nowrap;';
+    document.body.appendChild(badge);
+  }
+  badge.textContent=msg;badge.style.opacity='1';
+  clearTimeout(badge._timer);
+  badge._timer=setTimeout(()=>{badge.style.opacity='0';},3000);
+}
+
+function load(){
+  try{
+    const r=localStorage.getItem(SK);
+    if(r){
+      const loaded=JSON.parse(r);
+      if(loaded._starters){pendingStarters=new Set(loaded._starters);delete loaded._starters;}
+      state=loaded;
+    }
+  }catch(e){}
+  if(!state.players||state.players.length===0)state.players=SQUAD.map(p=>({...p}));
+  if(!state.games)state.games=[];
+  document.getElementById('g-date').value=new Date().toISOString().split('T')[0];
+  document.getElementById('g-time').value='18:00';
+  renderStarterGrid();
+  if(state.currentGame)showScreen('game',document.getElementById('tab-btn-game'));
+  render();
+  if(state.currentGame&&state.currentGame.running)startTimer();
+  requestWakeLock();
+  // Pull any new games from cloud silently
+  loadGamesFromCloud().then(hadNew=>{
+    if(hadNew){renderSeason();showSyncBadge('↓ '+state.games.length+' games loaded from cloud');}
+  });
+}
+
+async function requestWakeLock(){
+  try{if('wakeLock' in navigator){
+    wakeLock=await navigator.wakeLock.request('screen');
+    document.addEventListener('visibilitychange',async()=>{
+      if(document.visibilityState==='visible'&&state.currentGame&&state.currentGame.running){
+        try{wakeLock=await navigator.wakeLock.request('screen');}catch(e){}
+      }
+    });
+  }}catch(e){}
+}
+
+function exportData(){
+  const blob=new Blob([JSON.stringify(state,null,2)],{type:'application/json'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');a.href=url;
+  a.download='wildcats_backup_'+new Date().toISOString().split('T')[0]+'.json';
+  a.click();URL.revokeObjectURL(url);
+}
+
+function importData(e){
+  const file=e.target.files[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=ev=>{
+    try{
+      const d=JSON.parse(ev.target.result);if(!d.players)throw new Error();
+      if(!confirm('Replace all current data?'))return;
+      if(d._starters){pendingStarters=new Set(d._starters);delete d._starters;}
+      state=d;save();render();renderStarterGrid();alert('Restored.');
+    }catch(err){alert('Invalid backup file.');}
+  };
+  reader.readAsText(file);e.target.value='';
+}
+
+function showScreen(name,el){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById('screen-'+name).classList.add('active');
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  if(el)el.classList.add('active');
+  if(name==='season')renderSeason();
+  if(name==='squad')renderSetup();
+  if(name==='timeline'){populateTlSelector();renderTimeline();}
+  requestWakeLock();
+}
+
+/* ── STARTER GRID ── */
+function renderStarterGrid(){
+  const grid=document.getElementById('starter-grid');if(!grid)return;
+  const sorted=[...state.players].sort((a,b)=>a.id-b.id);
+  grid.innerHTML='';
+  sorted.forEach(p=>{
+    const sel=pendingStarters.has(p.id);
+    const div=document.createElement('div');
+    div.className='starter-item'+(sel?' selected':'');
+    div.innerHTML=`<div class="starter-dot">${sel?'✓':''}</div>
+      <div><div class="starter-num">${p.num}</div><div class="starter-name">${p.name}</div></div>`;
+    div.onclick=()=>toggleStarter(p.id);
+    grid.appendChild(div);
+  });
+  const el=document.getElementById('starter-count');
+  if(el)el.textContent=pendingStarters.size;
+}
+
+function toggleStarter(pid){
+  if(pendingStarters.has(pid)){pendingStarters.delete(pid);}
+  else{if(pendingStarters.size>=5){alert('5 starters already selected. Tap one to deselect first.');return;}pendingStarters.add(pid);}
+  save();renderStarterGrid();
+}
+
+/* ── TIMELINE HELPERS ── */
+function getTimestamp(cg){
+  const remaining=Math.max(0,Math.ceil(cg.qRemaining));
+  const elapsed=Q_SECS-remaining;
+  const m=Math.floor(elapsed/60);const s=elapsed%60;
+  return'Q'+cg.quarter+' '+m+':'+String(s).padStart(2,'0');
+}
+
+function addEvent(type,data){
+  const cg=state.currentGame;if(!cg)return;
+  if(!cg.timeline)cg.timeline=[];
+  const idx=cg.timeline.length;
+  cg.timeline.push({
+    id:Date.now()+idx,ts:getTimestamp(cg),q:cg.quarter,
+    type,data,scoreHome:cg.scoreHome,scoreAway:cg.scoreAway
+  });
+  return idx;
+}
+
+/* ── RENDER ── */
+function render(){renderOnCourtSection();renderActionPanel();renderRosterTable();renderScores();renderStatus();renderTimer();}
+
+function renderStatus(){
+  const cg=state.currentGame;
+  const badge=document.getElementById('status-badge');
+  const meta=document.getElementById('game-meta');
+  if(!cg){badge.className='badge badge-idle';badge.textContent='Idle';if(meta)meta.textContent='—';return;}
+  const parts=[cg.date,cg.time,'vs '+cg.opponent,cg.venue].filter(Boolean);
+  if(meta)meta.textContent=parts.join(' · ');
+  if(cg.timeout){badge.className='badge badge-to';badge.textContent='Timeout';}
+  else if(cg.running){badge.className='badge badge-live';badge.textContent='Live';}
+  else if(cg.ended){badge.className='badge badge-done';badge.textContent='Done';}
+  else{badge.className='badge badge-paused';badge.textContent='Paused';}
+  document.getElementById('pause-btn').textContent=cg.running?'Pause':'Resume';
+  for(let q=1;q<=4;q++){
+    const b=document.getElementById('q'+q);b.className='q-btn';
+    if(cg.quarter===q)b.classList.add('active');else if(q<cg.quarter)b.classList.add('done');
+  }
+  const tb=document.getElementById('to-banner');
+  if(cg.timeout){tb.style.display='block';document.getElementById('to-team').textContent=cg.timeoutTeam;}
+  else tb.style.display='none';
+  document.getElementById('score-opp-label').textContent=cg.opponent||'Opponent';
+}
+
+function renderTimer(){
+  const cg=state.currentGame;
+  const secs=cg?Math.max(0,Math.ceil(cg.qRemaining)):Q_SECS;
+  const el=document.getElementById('game-timer');
+  el.textContent=Math.floor(secs/60)+':'+String(secs%60).padStart(2,'0');
+  el.className='timer'+(secs<=30&&cg?' urgent':secs<=60&&cg?' warn':'');
+}
+
+function renderOnCourtSection(){
+  const cg=state.currentGame;
+  const onCount=cg?cg.onCourt.length:0;
+  document.getElementById('on-count').textContent=onCount+'/5';
+  document.getElementById('warn5').style.display=(onCount>=5&&cg&&!cg.ended)?'block':'none';
+
+  const list=document.getElementById('oncourt-list');
+  if(!cg||cg.onCourt.length===0){list.innerHTML='<span class="oncourt-empty">No players</span>';return;}
+  // sort by jersey number
+  const sorted=[...cg.onCourt].sort((a,b)=>a-b);
+  list.innerHTML='';
+  sorted.forEach(pid=>{
+    const p=state.players.find(p=>p.id===pid);if(!p)return;
+    const isSelected=selectedPid===pid;
+    const row=document.createElement('div');
+    row.className='court-player-row'+(isSelected?' selected':'');
+    row.innerHTML=`
+      <span class="court-p-num">${p.num}</span>
+      <span class="court-p-name">${p.name}</span>
+      <button class="court-sel-btn">${isSelected?'✓':'Select'}</button>`;
+    row.querySelector('.court-sel-btn').onclick=(e)=>{e.stopPropagation();selectPlayer(pid);};
+    list.appendChild(row);
+  });
+}
+
+function renderActionPanel(){
+  const cg=state.currentGame;
+  const noPlayer=document.getElementById('action-no-player');
+  const panel=document.getElementById('action-panel');
+  if(!cg||cg.ended||selectedPid===null){noPlayer.style.display='block';panel.style.display='none';return;}
+  const p=state.players.find(p=>p.id===selectedPid);
+  if(!p){noPlayer.style.display='block';panel.style.display='none';return;}
+  noPlayer.style.display='none';panel.style.display='block';
+  document.getElementById('spb-name').textContent=p.num+' '+p.name;
+}
+
+function renderScores(){
+  const cg=state.currentGame;
+  document.getElementById('score-home').textContent=cg?cg.scoreHome:0;
+  document.getElementById('score-away').textContent=cg?cg.scoreAway:0;
+}
+
+function renderRosterTable(){
+  const tbody=document.getElementById('roster-body');
+  const cg=state.currentGame;
+  const now=(cg&&cg.running)?Date.now():null;
+  const sorted=[...state.players].sort((a,b)=>a.id-b.id);
+  tbody.innerHTML='';
+  // totals accumulators
+  let totMins=0,totFtm=0,totFta=0,totFgm=0,totFga=0,totAst=0,totReb=0,totStl=0,totBlk=0,totTov=0,totFoul=0;
+  sorted.forEach(p=>{
+    const isOn=cg&&cg.onCourt.includes(p.id);
+    const mins=getPlayerMins(p.id,now);
+    const s=cg&&cg.stats?cg.stats[p.id]:null;
+    const fgpct=s&&s.fga>0?Math.round(s.fgm/s.fga*100)+'%':'—';
+    const tr=document.createElement('tr');if(isOn)tr.classList.add('on-row');
+    const nameTd=document.createElement('td');
+    nameTd.innerHTML=`<div class="pname-cell">
+      <div class="sub-toggle${isOn?' on':''}" onclick="togglePlayer(${p.id})"><div class="sub-dot"></div></div>
+      <span class="pnum-tag">${p.num}</span><span style="font-size:12px;">${p.name}</span></div>`;
+    tr.appendChild(nameTd);
+    const minsTd=document.createElement('td');minsTd.className='mins-cell';minsTd.textContent=fmtMins(mins);tr.appendChild(minsTd);
+    const vals=s?[s.ftm||0,s.fta||0,s.fgm,s.fga,fgpct,s.ast,s.reb,s.stl,s.blk,s.tov,s.foul||0]:['—','—','—','—','—','—','—','—','—','—','—'];
+    vals.forEach((v,i)=>{
+      const td=document.createElement('td');
+      if(i===2)td.className='fgm-val';if(i===9)td.className='tov-val';if(i===10)td.style.color='var(--amber)';
+      td.textContent=v;tr.appendChild(td);
+    });
+    tbody.appendChild(tr);
+    // accumulate totals
+    if(s){totMins+=mins;totFtm+=s.ftm||0;totFta+=s.fta||0;totFgm+=s.fgm;totFga+=s.fga;totAst+=s.ast;totReb+=s.reb;totStl+=s.stl;totBlk+=s.blk;totTov+=s.tov;totFoul+=s.foul||0;}
+  });
+  // totals row
+  if(cg){
+    const totFgpct=totFga>0?Math.round(totFgm/totFga*100)+'%':'—';
+    const ttr=document.createElement('tr');
+    ttr.style.cssText='border-top:2px solid var(--border2);background:var(--surface2);font-weight:600;';
+    const tvals=[['TOTALS','','',''],totFgm,totFga,totFgpct,totAst,totReb,totStl,totBlk,totTov];
+    // name cell
+    const tnameTd=document.createElement('td');
+    tnameTd.innerHTML=`<div class="pname-cell" style="padding-left:2px;"><span style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;">Team totals</span></div>`;
+    ttr.appendChild(tnameTd);
+    // mins cell
+    const tminsTd=document.createElement('td');tminsTd.className='mins-cell';tminsTd.style.fontWeight='700';tminsTd.textContent=fmtMins(totMins);ttr.appendChild(tminsTd);
+    // stat cells
+    [totFtm,totFta,totFgm,totFga,totFgpct,totAst,totReb,totStl,totBlk,totTov,totFoul].forEach((v,i)=>{
+      const td=document.createElement('td');
+      td.style.fontWeight='700';
+      if(i===2)td.style.color='#2563eb';
+      if(i===9)td.style.color='var(--red)';
+      if(i===10)td.style.color='var(--amber)';
+      td.textContent=v;ttr.appendChild(td);
+    });
+    tbody.appendChild(ttr);
+  }
+}
+
+/* ── TIMELINE ── */
+function populateTlSelector(){
+  const sel=document.getElementById('tl-game-sel');
+  sel.innerHTML='';
+  if(state.currentGame){
+    const o=document.createElement('option');o.value='live';
+    o.textContent='Current game — '+[state.currentGame.date,'vs '+state.currentGame.opponent].filter(Boolean).join(' ');
+    sel.appendChild(o);
+  }
+  state.games.forEach((g,i)=>{
+    const o=document.createElement('option');o.value=i;
+    o.textContent=[g.date,g.time,'vs '+g.opponent].filter(Boolean).join(' ');
+    sel.appendChild(o);
+  });
+  if(!state.currentGame&&state.games.length>0)sel.value='0';
+}
+
+function renderTimeline(){
+  const sel=document.getElementById('tl-game-sel');
+  const val=sel?sel.value:'live';
+  const source=val==='live'?state.currentGame:state.games[parseInt(val)];
+  const infoEl=document.getElementById('tl-game-info');
+  const content=document.getElementById('tl-content');
+
+  if(!source){infoEl.textContent='No game selected';content.innerHTML='<div class="tl-empty">No game data</div>';return;}
+  infoEl.textContent=[source.date,source.time,'vs '+source.opponent,source.venue].filter(Boolean).join(' · ');
+
+  if(!source.timeline||source.timeline.length===0){content.innerHTML='<div class="tl-empty">No events recorded yet</div>';return;}
+
+  const quarters={};
+  source.timeline.forEach(ev=>{
+    const q='Q'+(ev.q||1);
+    if(!quarters[q])quarters[q]=[];
+    quarters[q].push(ev);
+  });
+
+  const oppName=source.opponent||'Opponent';
+  let html='';
+  ['Q1','Q2','Q3','Q4'].forEach(q=>{
+    if(!quarters[q])return;
+    html+=`<div class="tl-quarter-block"><div class="tl-q-label">${q}</div>`;
+    quarters[q].forEach(ev=>{
+      const icon=TL_ICONS[ev.type]||'●';
+      const cls=TL_CLASS[ev.type]||'stat';
+      let title='',subtext='';
+      const score=ev.scoreHome+'–'+ev.scoreAway;
+      const isPts=ev.type==='pts_1'||ev.type==='pts_2'||ev.type==='pts_3'||ev.type==='pts';
+      const scoreBadge=(isPts||ev.type==='opp_pts'||ev.type==='qend')?
+        `<span class="tl-score-badge${ev.type==='opp_pts'?' opp':''}">${score}</span>`:'';
+
+      switch(ev.type){
+        case 'pts_1': title=ev.data.player+' — Free throw (+1)'; break;
+        case 'pts_2': title=ev.data.player+' — Field goal (+2)'; break;
+        case 'pts_3': title=ev.data.player+' — Three pointer (+3)'; break;
+        case 'pts':   title=ev.data.player+' — '+ev.data.label; break;
+        case 'opp_pts': title=oppName+' — +'+ev.data.pts+' pts'; break;
+        case 'sub_on':  title='Sub on: '+ev.data.player; break;
+        case 'sub_off': title='Sub off: '+ev.data.player; break;
+        case 'timeout': title='Timeout — Eltham'; break;
+        case 'opp_timeout': title='Timeout — '+oppName; break;
+        case 'fga':  title=ev.data.player+' — Missed shot (FGA)'; break;
+        case 'ft_miss': title=ev.data.player+' — Free throw missed'; break;
+        case 'ast':  title=ev.data.player+' — Assist'; break;
+        case 'reb':  title=ev.data.player+' — Rebound'; break;
+        case 'stl':  title=ev.data.player+' — Steal'; break;
+        case 'blk':  title=ev.data.player+' — Block'; break;
+        case 'tov':  title=ev.data.player+' — Turnover'; break;
+        case 'foul': title=ev.data.player+' — Personal foul'; break;
+        case 'qend': title='End of '+q; subtext='Score: '+score; break;
+        case 'start': title=ev.data.label||'Game started'; break;
+        default: title=ev.type;
+      }
+      html+=`<div class="tl-event">
+        <div class="tl-time">${ev.ts}</div>
+        <div class="tl-icon ${cls}">${icon}</div>
+        <div class="tl-body">
+          <div class="tl-title">${title}${scoreBadge}</div>
+          ${subtext?`<div class="tl-sub-text">${subtext}</div>`:''}
+        </div>
+      </div>`;
+    });
+    html+='</div>';
+  });
+  content.innerHTML=html;
+}
+
+/* ── EXPORT TIMELINE — opens new tab (iOS compatible) ── */
+function exportTimeline(){
+  const sel=document.getElementById('tl-game-sel');
+  const val=sel?sel.value:'live';
+  const source=val==='live'?state.currentGame:state.games[parseInt(val)];
+  if(!source){alert('No game selected.');return;}
+
+  const sorted=[...state.players].sort((a,b)=>a.id-b.id);
+  const oppName=source.opponent||'Opponent';
+
+  let statsRows='';
+  sorted.forEach(p=>{
+    const m=source.summary?source.summary.minutes[p.id]||0:(source.minutes?source.minutes[p.id]||0:0);
+    const s=source.summary?source.summary.stats[p.id]||emptyStats():(source.stats?source.stats[p.id]||emptyStats():emptyStats());
+    const fg=s.fga>0?Math.round(s.fgm/s.fga*100)+'%':'—';
+    statsRows+=`<tr><td>${p.num}</td><td>${p.name}</td><td>${fmtMins(m)}</td><td>${s.pts||0}</td><td>${s.ftm||0}/${s.fta||0}</td><td>${s.fgm}/${s.fga}</td><td>${fg}</td><td>${s.ast}</td><td>${s.reb}</td><td>${s.stl}</td><td>${s.blk}</td><td>${s.tov}</td><td>${s.foul||0}</td></tr>`;
+  });
+
+  const evLabels={
+    pts_1:ev=>ev.data.player+' — Free throw (+1)',
+    pts_2:ev=>ev.data.player+' — Field goal (+2)',
+    pts_3:ev=>ev.data.player+' — Three pointer (+3)',
+    pts:ev=>ev.data.player+' — '+ev.data.label,
+    opp_pts:ev=>oppName+' — +'+ev.data.pts+' pts',
+    sub_on:ev=>'Sub on: '+ev.data.player,
+    sub_off:ev=>'Sub off: '+ev.data.player,
+    timeout:()=>'Timeout — Eltham',
+    opp_timeout:()=>'Timeout — '+oppName,
+    fga:ev=>ev.data.player+' — Missed shot (FGA)',
+    ft_miss:ev=>ev.data.player+' — Free throw missed',
+    ast:ev=>ev.data.player+' — Assist',
+    reb:ev=>ev.data.player+' — Rebound',
+    stl:ev=>ev.data.player+' — Steal',
+    blk:ev=>ev.data.player+' — Block',
+    tov:ev=>ev.data.player+' — Turnover',
+    foul:ev=>ev.data.player+' — Personal foul',
+    qend:ev=>'End of Q'+(ev.q||''),
+    start:ev=>ev.data.label||'Game started'
+  };
+
+  let tlRows='';
+  if(source.timeline){
+    source.timeline.forEach(ev=>{
+      const fn=evLabels[ev.type];
+      const desc=fn?fn(ev):ev.type;
+      tlRows+=`<tr><td>Q${ev.q||''}</td><td>${ev.ts}</td><td>${desc}</td><td>${ev.scoreHome}–${ev.scoreAway}</td></tr>`;
+    });
+  }
+
+  const roundStr=source.round?'Round '+source.round+' — ':'';const html=`<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Wildcats — ${roundStr}${source.date} vs ${oppName}</title>
+<style>
+body{font-family:Arial,sans-serif;padding:20px;color:#1a1a2e;max-width:800px;margin:0 auto;}
+h1{font-size:20px;margin-bottom:4px;}
+.meta{font-size:13px;color:#666;margin-bottom:20px;}
+h2{font-size:15px;margin:20px 0 8px;border-bottom:2px solid #3b82f6;padding-bottom:4px;color:#3b82f6;}
+table{width:100%;border-collapse:collapse;font-size:13px;margin-bottom:16px;}
+th{background:#f0f4ff;padding:7px 8px;text-align:left;font-weight:600;border-bottom:2px solid #dde;}
+td{padding:7px 8px;border-bottom:1px solid #eee;}
+.score-wrap{display:flex;gap:40px;margin-bottom:20px;}
+.sc{text-align:center;background:#f8faff;border-radius:10px;padding:12px 20px;}
+.sc-name{font-size:11px;color:#666;margin-bottom:2px;font-weight:600;text-transform:uppercase;}
+.sc-num{font-size:36px;font-weight:700;}
+.sc-num.h{color:#16a34a;}.sc-num.a{color:#dc2626;}
+@media print{button{display:none;}}
+</style></head><body>
+<h1>Eltham Wildcats U12 Girls 2 — ${roundStr}Game Report</h1>
+<div class="meta">${[source.date,source.time,'vs '+oppName,source.venue].filter(Boolean).join(' · ')}</div>
+<div class="score-wrap">
+  <div class="sc"><div class="sc-name">Eltham</div><div class="sc-num h">${source.scoreHome||0}</div></div>
+  <div class="sc"><div class="sc-name">${oppName}</div><div class="sc-num a">${source.scoreAway||0}</div></div>
+</div>
+<h2>Player Stats</h2>
+<table><thead><tr><th>#</th><th>Player</th><th>MIN</th><th>PTS</th><th>FT</th><th>FG</th><th>FG%</th><th>AST</th><th>REB</th><th>STL</th><th>BLK</th><th>TO</th><th>FL</th></tr></thead>
+<tbody>${statsRows}</tbody></table>
+<h2>Game Timeline</h2>
+<table><thead><tr><th>Qtr</th><th>Time</th><th>Event</th><th>Score</th></tr></thead>
+<tbody>${tlRows}</tbody></table>
+<p style="font-size:11px;color:#999;margin-top:20px;">Generated by Eltham Wildcats U12 Tracker</p>
+</body></html>`;
+
+  // Open in new tab — works on iOS Safari
+  const w=window.open('','_blank');
+  if(w){w.document.write(html.replace('Game Report','${roundStr}Game Report'));w.document.close();}
+  else{alert('Please allow popups for this site to export the report.');}
+}
+
+/* ── GAME CONTROL ── */
+function startGame(){
+  if(pendingStarters.size===0){
+    document.getElementById('warn-starters').style.display='block';
+    return;
+  }
+  document.getElementById('warn-starters').style.display='none';
+  const date=document.getElementById('g-date').value;
+  const time=document.getElementById('g-time').value;
+  const round=document.getElementById('g-round').value.trim();
+  const opp=document.getElementById('g-opp').value.trim();
+  const venue=document.getElementById('g-venue').value.trim();
+  const starters=Array.from(pendingStarters);
+  state.currentGame={
+    id:Date.now(),date:fmtDate(date),time:fmtTime(time),round:round,
+    opponent:opp||'Unknown',venue:venue,
+    quarter:1,running:true,ended:false,timeout:false,timeoutTeam:'',
+    elapsed:0,lastTick:Date.now(),qRemaining:Q_SECS,
+    onCourt:[...starters],stints:{},minutes:{},stats:{},
+    scoreHome:0,scoreAway:0,timeline:[]
+  };
+  state.players.forEach(p=>{state.currentGame.minutes[p.id]=0;state.currentGame.stats[p.id]=emptyStats();});
+  const now=Date.now();
+  starters.forEach(pid=>{state.currentGame.stints[pid]=now;});
+  const starterNames=starters.map(pid=>{const p=state.players.find(p=>p.id===pid);return p?p.name:'?';}).join(', ');
+  addEvent('start',{label:'Starting 5: '+starterNames});
+  actionLog=[];oppScoreLog=[];selectedPid=null;
+  startTimer();save();
+  showScreen('game',document.getElementById('tab-btn-game'));
+  render();requestWakeLock();
+}
+
+function fmtDate(d){if(!d)return'';try{const p=d.split('-');return p[2]+'/'+p[1]+'/'+p[0];}catch(e){return d;}}
+function fmtTime(t){if(!t)return'';try{const[h,m]=t.split(':');const hr=parseInt(h);return(hr%12||12)+':'+m+(hr>=12?'pm':'am');}catch(e){return t;}}
+
+function startTimer(){
+  if(timerInterval)clearInterval(timerInterval);
+  if(!state.currentGame)return;
+  state.currentGame.lastTick=Date.now();
+  timerInterval=setInterval(()=>{
+    const cg=state.currentGame;if(!cg||!cg.running)return;
+    const now=Date.now();const delta=(now-cg.lastTick)/1000;
+    cg.elapsed+=delta;cg.qRemaining=Math.max(0,cg.qRemaining-delta);cg.lastTick=now;
+    renderTimer();
+    if(cg.qRemaining<=0){
+      addEvent('qend',{});
+      if(navigator.vibrate)navigator.vibrate([200,100,200]);
+      pauseInternal();save();renderStatus();
+    }
+    if(Math.floor(cg.elapsed)%15===0)save();
+  },500);
+}
+
+function pauseInternal(){
+  const cg=state.currentGame;if(!cg)return;
+  cg.running=false;const now=Date.now();
+  cg.onCourt.forEach(pid=>{if(cg.stints[pid]){cg.minutes[pid]=(cg.minutes[pid]||0)+(now-cg.stints[pid])/60000;delete cg.stints[pid];}});
+  if(timerInterval)clearInterval(timerInterval);
+}
+
+function togglePause(){
+  const cg=state.currentGame;if(!cg||cg.ended)return;
+  if(cg.running){pauseInternal();cg.timeout=false;save();render();}
+  else{cg.running=true;cg.timeout=false;const now=Date.now();cg.lastTick=now;cg.onCourt.forEach(pid=>{cg.stints[pid]=now;});startTimer();save();render();requestWakeLock();}
+}
+
+function callTimeout(team){
+  const cg=state.currentGame;if(!cg||cg.ended)return;
+  if(cg.running)pauseInternal();
+  cg.timeout=true;cg.timeoutTeam=team;
+  addEvent(team==='Eltham'?'timeout':'opp_timeout',{team});
+  save();render();
+}
+
+function resetQClock(){const cg=state.currentGame;if(!cg)return;cg.qRemaining=Q_SECS;save();renderTimer();}
+
+function setQuarter(q){
+  const cg=state.currentGame;if(!cg)return;
+  // Log end of previous quarter if transitioning forward
+  if(q>cg.quarter){addEvent('qend',{});}
+  cg.quarter=q;cg.qRemaining=Q_SECS;
+  save();renderStatus();renderTimer();
+}
+
+function endGame(){
+  const cg=state.currentGame;if(!cg)return;
+  if(!confirm('End game and save to season?'))return;
+  pauseInternal();
+  cg.ended=true;cg.running=false;cg.timeout=false;cg.onCourt=[];
+  const summary={minutes:{},stats:{}};
+  state.players.forEach(p=>{summary.minutes[p.id]=cg.minutes[p.id]||0;summary.stats[p.id]={...cg.stats[p.id]};});
+  cg.summary=summary;
+  const savedGame={...cg};
+  state.games.push(savedGame);
+  state.games.sort((a,b)=>parseDateStr(b.date)-parseDateStr(a.date));
+  state.currentGame=null;actionLog=[];oppScoreLog=[];selectedPid=null;pendingStarters=new Set();
+  save();render();renderStarterGrid();
+  showScreen('season',document.getElementById('tab-btn-season'));
+  // sync to Supabase
+  syncGameToCloud(savedGame);
+}
+
+function parseDateStr(d){if(!d)return 0;try{const p=d.split('/');return new Date(p[2]+'-'+p[1]+'-'+p[0]).getTime();}catch(e){return 0;}}
+
+/* ── SUBS ── */
+function togglePlayer(pid){
+  const cg=state.currentGame;if(!cg||cg.ended)return;
+  const idx=cg.onCourt.indexOf(pid);const isOn=idx!==-1;
+  if(!isOn&&cg.onCourt.length>=5){document.getElementById('warn5').style.display='block';return;}
+  const now=Date.now();const p=state.players.find(p=>p.id===pid);
+  if(isOn){
+    cg.onCourt.splice(idx,1);
+    if(cg.running&&cg.stints[pid]){cg.minutes[pid]=(cg.minutes[pid]||0)+(now-cg.stints[pid])/60000;delete cg.stints[pid];}
+    if(selectedPid===pid)selectedPid=null;
+    addEvent('sub_off',{player:p?p.name:'?'});
+  } else {
+    cg.onCourt.push(pid);
+    if(cg.running)cg.stints[pid]=now;
+    addEvent('sub_on',{player:p?p.name:'?'});
+  }
+  save();renderOnCourtSection();renderActionPanel();renderRosterTable();renderStatus();
+}
+
+function selectPlayer(pid){selectedPid=(selectedPid===pid)?null:pid;renderOnCourtSection();renderActionPanel();}
+function deselectPlayer(){selectedPid=null;renderOnCourtSection();renderActionPanel();}
+
+/* ── ACTIONS ── */
+function logAction(type){
+  const cg=state.currentGame;if(!cg||cg.ended)return;
+  if(selectedPid===null)return;
+  const s=cg.stats[selectedPid];
+  const p=state.players.find(p=>p.id===selectedPid);
+  const pname=p?p.name:'?';
+  const labels={'1pt':'Free throw made','ft_miss':'Free throw missed','2pt':'Field goal (+2)','3pt':'Three pointer (+3)','fga':'Missed shot','ast':'Assist','reb':'Rebound','stl':'Steal','blk':'Block','tov':'Turnover','foul':'Personal foul'};
+  let pts=0;
+  if(type==='1pt'){s.ftm++;s.fta++;s.pts+=1;pts=1;cg.scoreHome+=1;addEvent('pts_1',{player:pname,label:'Free throw made',pts:1});}
+  else if(type==='ft_miss'){s.fta++;addEvent('ft_miss',{player:pname});}
+  else if(type==='2pt'){s.fgm++;s.fga++;s.pts+=2;pts=2;cg.scoreHome+=2;addEvent('pts_2',{player:pname,label:'Field goal (+2)',pts:2});}
+  else if(type==='3pt'){s.fgm++;s.fga++;s.pts+=3;pts=3;cg.scoreHome+=3;addEvent('pts_3',{player:pname,label:'Three pointer (+3)',pts:3});}
+  else if(type==='fga'){s.fga++;addEvent('fga',{player:pname});}
+  else if(type==='ast'){s.ast++;addEvent('ast',{player:pname});}
+  else if(type==='reb'){s.reb++;addEvent('reb',{player:pname});}
+  else if(type==='stl'){s.stl++;addEvent('stl',{player:pname});}
+  else if(type==='blk'){s.blk++;addEvent('blk',{player:pname});}
+  else if(type==='tov'){s.tov++;addEvent('tov',{player:pname});}
+  else if(type==='foul'){s.foul++;addEvent('foul',{player:pname});}
+
+  const tlIdx=cg.timeline.length-1;
+  actionLog.push({pid:selectedPid,type,pts,tlIdx});
+  document.getElementById('last-action').textContent=pname+' — '+labels[type];
+  save();renderRosterTable();renderScores();
+}
+
+function undoAction(){
+  const cg=state.currentGame;if(!cg||actionLog.length===0){document.getElementById('last-action').textContent='Nothing to undo.';return;}
+  const last=actionLog.pop();
+  const s=cg.stats[last.pid];
+  // Reverse stat
+  if(last.type==='1pt'){
+    if(s.ftm>0)s.ftm--;if(s.fta>0)s.fta--;s.pts=Math.max(0,s.pts-last.pts);cg.scoreHome=Math.max(0,cg.scoreHome-last.pts);
+  } else if(last.type==='2pt'||last.type==='3pt'){
+    if(s.fgm>0)s.fgm--;if(s.fga>0)s.fga--;s.pts=Math.max(0,s.pts-last.pts);cg.scoreHome=Math.max(0,cg.scoreHome-last.pts);
+  } else if(last.type==='ft_miss'){if(s.fta>0)s.fta--;}
+  else if(last.type==='fga'){if(s.fga>0)s.fga--;}
+  else{if(s[last.type]!==undefined&&s[last.type]>0)s[last.type]--;}
+  // Remove specific timeline event by index
+  if(cg.timeline&&last.tlIdx!==undefined&&cg.timeline[last.tlIdx]){
+    cg.timeline.splice(last.tlIdx,1);
+  }
+  document.getElementById('last-action').textContent='Last action undone.';
+  save();renderRosterTable();renderScores();
+}
+
+function addOppScore(pts){
+  const cg=state.currentGame;if(!cg||cg.ended)return;
+  cg.scoreAway+=pts;
+  const tlIdx=cg.timeline?cg.timeline.length:0;
+  addEvent('opp_pts',{pts});
+  oppScoreLog.push({pts,tlIdx});
+  save();renderScores();
+}
+
+function undoOppScore(){
+  const cg=state.currentGame;if(!cg||oppScoreLog.length===0)return;
+  const last=oppScoreLog.pop();
+  cg.scoreAway=Math.max(0,cg.scoreAway-last.pts);
+  if(cg.timeline&&last.tlIdx!==undefined&&cg.timeline[last.tlIdx]){
+    cg.timeline.splice(last.tlIdx,1);
+  }
+  save();renderScores();
+}
+
+/* ── HELPERS ── */
+function getPlayerMins(pid,now){
+  const cg=state.currentGame;if(!cg)return 0;
+  let t=cg.minutes[pid]||0;
+  if(now&&cg.stints[pid])t+=(now-cg.stints[pid])/60000;
+  return t;
+}
+function fmtMins(m){return Math.floor(m)+':'+String(Math.floor((m-Math.floor(m))*60)).padStart(2,'0');}
+
+/* ── SEASON ── */
+function renderSeason(){
+  const games=state.games;
+  const gc=document.getElementById('game-count');
+  if(gc)gc.textContent=games.length;
+  const fairShare=(40*5/state.players.length).toFixed(1);
+  const fsEl=document.getElementById('fair-share');
+  if(fsEl)fsEl.textContent=fairShare;
+
+  // ── RESULTS VIEW ──
+  const resList=document.getElementById('season-results-list');
+  if(resList){
+    if(games.length===0){resList.innerHTML='<div style="font-size:13px;color:var(--muted);padding:16px 0;">No games yet</div>';}
+    else{
+      resList.innerHTML=games.map((g,idx)=>{
+        const diff=(g.scoreHome||0)-(g.scoreAway||0);
+        const oppWon=diff<0;const elthamWon=diff>0;
+        const marginText=diff===0?'Draw':((elthamWon?'Eltham':(g.opponent||'Opponent'))+' won by '+Math.abs(diff)+' point'+(Math.abs(diff)===1?'':'s'));
+        const roundLabel=g.round?'Round '+g.round:'Game';
+        const elthamScore=g.scoreHome||0;const oppScore=g.scoreAway||0;
+        return`<div class="round-block">
+          <div class="round-header">
+            <div class="round-header-title">${roundLabel}</div>
+            <div class="round-header-date">${g.date}${g.time?' · '+g.time:''}</div>
+          </div>
+          <div class="game-card" onclick="openGameDetail(${idx})">
+            <div class="game-card-teams">
+              <div class="game-card-names">
+                <div class="team-row">
+                  <div class="team-badge opp">${(g.opponent||'OPP').substring(0,3).toUpperCase()}</div>
+                  <span class="team-name opp">${g.opponent||'Opponent'}</span>
+                </div>
+                <div class="team-row">
+                  <div class="team-badge">ELT</div>
+                  <span class="team-name">Eltham U12 Girls 2</span>
+                </div>
+              </div>
+              <div class="game-card-scores">
+                <div class="team-score${oppWon?' winner':''}">${oppScore}</div>
+                <div class="score-divider">FINAL</div>
+                <div class="team-score${elthamWon?' winner':''}">${elthamScore}</div>
+              </div>
+            </div>
+            <div class="game-card-meta">
+              ${g.venue?`<div class="meta-item">📍 ${g.venue}</div>`:''}
+            </div>
+            <div class="game-card-footer">
+              <div class="margin-text">${marginText}</div>
+              <div style="display:flex;gap:6px;align-items:center;">
+                <span style="font-size:12px;color:var(--accent);">Stats & timeline →</span>
+                <span class="gli-edit" onclick="event.stopPropagation();openEditModal(${idx})" style="border:1px solid var(--border2);border-radius:5px;padding:3px 8px;">Edit</span>
+              </div>
+            </div>
+          </div>
+        </div>`;
+      }).join('');
+    }
+  }
+
+  if(games.length===0){
+    document.getElementById('season-mins-body').innerHTML='<tr><td colspan="4" style="color:var(--muted);padding:12px 0;">No games yet</td></tr>';
+    document.getElementById('season-stats-body').innerHTML='<tr><td colspan="13" style="color:var(--muted);padding:12px 0;">No games yet</td></tr>';
+    return;
+  }
+
+  // ── STATS + MINS ──
+  const totMins={},totStats={};
+  state.players.forEach(p=>{totMins[p.id]=0;totStats[p.id]=emptyStats();});
+  games.forEach(g=>{
+    if(g.summary){
+      state.players.forEach(p=>{
+        totMins[p.id]+=(g.summary.minutes[p.id]||0);
+        if(g.summary.stats)['fgm','fga','ftm','fta','ast','reb','stl','blk','tov','foul','pts'].forEach(k=>{totStats[p.id][k]+=(g.summary.stats[p.id]?g.summary.stats[p.id][k]||0:0);});
+      });
+    }
+  });
+  const maxMins=Math.max(...state.players.map(p=>totMins[p.id]),1);
+  const fs=parseFloat(fairShare);
+  const sorted=[...state.players].sort((a,b)=>a.id-b.id);
+  document.getElementById('season-mins-body').innerHTML=sorted.map(p=>{
+    const total=totMins[p.id],avg=total/games.length;
+    const pct=Math.round(total/maxMins*100);
+    const col=avg<fs*0.6?'#dc2626':avg<fs*0.85?'#d97706':'#16a34a';
+    return`<tr><td>${p.num} ${p.name}</td><td>${fmtMins(total)}</td><td>${fmtMins(avg)}</td><td><div class="bar-bg"><div class="bar-fill" style="width:${pct}%;background:${col};"></div></div></td></tr>`;
+  }).join('');
+  document.getElementById('season-stats-body').innerHTML=sorted.map(p=>{
+    const s=totStats[p.id];const fg=s.fga>0?Math.round(s.fgm/s.fga*100)+'%':'—';
+    return`<tr><td>${p.num} ${p.name}</td><td>${s.pts||0}</td><td>${s.ftm||0}</td><td>${s.fta||0}</td><td>${s.fgm}</td><td>${s.fga}</td><td>${fg}</td><td>${s.ast}</td><td>${s.reb}</td><td>${s.stl}</td><td>${s.blk}</td><td>${s.tov}</td><td style="color:var(--amber);">${s.foul||0}</td></tr>`;
+  }).join('');
+}
+
+
+function openEditModal(idx){
+  editingGameIdx=idx;const g=state.games[idx];
+  document.getElementById('edit-modal-title').textContent='Edit: '+g.date+' vs '+g.opponent;
+  const sorted=[...state.players].sort((a,b)=>a.id-b.id);
+  let html=`<div style="overflow-x:auto;"><table class="edit-tbl">
+    <thead><tr><th>Player</th><th>MIN</th><th>PTS</th><th>FTM</th><th>FTA</th><th>FGM</th><th>FGA</th><th>AST</th><th>REB</th><th>STL</th><th>BLK</th><th>TO</th><th>FL</th></tr></thead><tbody>`;
+  sorted.forEach(p=>{
+    const mins=g.summary?Math.round(g.summary.minutes[p.id]||0):0;
+    const s=g.summary&&g.summary.stats?g.summary.stats[p.id]||emptyStats():emptyStats();
+    html+=`<tr><td>${p.num} ${p.name}</td>
+      <td><input class="edit-input" data-pid="${p.id}" data-field="mins" value="${mins}"/></td>
+      <td><input class="edit-input" data-pid="${p.id}" data-field="pts" value="${s.pts||0}"/></td>
+      <td><input class="edit-input" data-pid="${p.id}" data-field="ftm" value="${s.ftm||0}"/></td>
+      <td><input class="edit-input" data-pid="${p.id}" data-field="fta" value="${s.fta||0}"/></td>
+      <td><input class="edit-input" data-pid="${p.id}" data-field="fgm" value="${s.fgm}"/></td>
+      <td><input class="edit-input" data-pid="${p.id}" data-field="fga" value="${s.fga}"/></td>
+      <td><input class="edit-input" data-pid="${p.id}" data-field="ast" value="${s.ast}"/></td>
+      <td><input class="edit-input" data-pid="${p.id}" data-field="reb" value="${s.reb}"/></td>
+      <td><input class="edit-input" data-pid="${p.id}" data-field="stl" value="${s.stl}"/></td>
+      <td><input class="edit-input" data-pid="${p.id}" data-field="blk" value="${s.blk}"/></td>
+      <td><input class="edit-input" data-pid="${p.id}" data-field="tov" value="${s.tov}"/></td>
+      <td><input class="edit-input" data-pid="${p.id}" data-field="foul" value="${s.foul||0}"/></td></tr>`;
+  });
+  html+=`</tbody></table></div>
+  <div style="margin-top:12px;display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+    <div><div class="field-label" style="margin-bottom:4px;">Eltham score</div><input type="text" id="edit-score-home" value="${g.scoreHome||0}"/></div>
+    <div><div class="field-label" style="margin-bottom:4px;">${g.opponent} score</div><input type="text" id="edit-score-away" value="${g.scoreAway||0}"/></div>
+  </div>`;
+  document.getElementById('edit-modal-body').innerHTML=html;
+  document.getElementById('edit-modal').classList.add('visible');
+}
+function saveEditModal(){
+  if(editingGameIdx===null)return;const g=state.games[editingGameIdx];
+  if(!g.summary)g.summary={minutes:{},stats:{}};
+  document.querySelectorAll('#edit-modal-body .edit-input').forEach(input=>{
+    const pid=parseInt(input.dataset.pid);const field=input.dataset.field;const val=parseInt(input.value)||0;
+    if(field==='mins')g.summary.minutes[pid]=val;
+    else{if(!g.summary.stats[pid])g.summary.stats[pid]=emptyStats();g.summary.stats[pid][field]=val;}
+  });
+  g.scoreHome=parseInt(document.getElementById('edit-score-home').value)||0;
+  g.scoreAway=parseInt(document.getElementById('edit-score-away').value)||0;
+  save();closeEditModal();renderSeason();
+}
+function closeEditModal(){document.getElementById('edit-modal').classList.remove('visible');editingGameIdx=null;}
+
+/* ── SQUAD ── */
+function renderSetup(){
+  const sorted=[...state.players].sort((a,b)=>a.id-b.id);
+  document.getElementById('player-list-setup').innerHTML=sorted.map(p=>`
+    <div class="setup-row">
+      <input type="text" value="${p.num}" onchange="updateNum(${p.id},this.value)"/>
+      <input type="text" value="${p.name}" onchange="renamePlayer(${p.id},this.value)"/>
+      <button class="btn btn-red" style="padding:8px 10px;" onclick="removePlayer(${p.id})">✕</button>
+    </div>`).join('');
+}
+function updateNum(id,v){const p=state.players.find(p=>p.id===id);if(p){p.num=v;save();}}
+function renamePlayer(id,v){const p=state.players.find(p=>p.id===id);if(p){p.name=v;save();}}
+function removePlayer(id){state.players=state.players.filter(p=>p.id!==id);save();renderSetup();}
+function addPlayer(){
+  const num=document.getElementById('new-num').value.trim();
+  const name=document.getElementById('new-name').value.trim();if(!name)return;
+  const id=Date.now();state.players.push({id,num:num?'#'+num.replace('#',''):'-',name});
+  if(state.currentGame){state.currentGame.minutes[id]=0;state.currentGame.stats[id]=emptyStats();}
+  document.getElementById('new-num').value='';document.getElementById('new-name').value='';
+  save();renderSetup();
+}
+function clearAll(){
+  if(!confirm('Clear all game data? Squad will be kept.'))return;
+  state={players:state.players,games:[],currentGame:null};
+  pendingStarters=new Set();save();render();renderStarterGrid();
+}
+
+// Cloud sync helpers
+async function pushAllToCloud(){
+  if(state.games.length===0){showSyncBadge('No games to sync');return;}
+  showSyncBadge('Syncing '+state.games.length+' games...');
+  let ok=0;
+  for(const g of state.games){
+    const r=await sbSaveGame(g);
+    if(r!==null)ok++;
+  }
+  showSyncBadge('✓ Synced '+ok+'/'+state.games.length+' games to cloud');
+}
+
+async function pullFromCloud(){
+  showSyncBadge('Pulling from cloud...');
+  try{
+    const cloudGames=await sbLoadGames();
+    if(!cloudGames||cloudGames.length===0){showSyncBadge('No games found in cloud');return;}
+    state.games=cloudGames;
+    state.games.sort((a,b)=>parseDateStr(b.date)-parseDateStr(a.date));
+    save();renderSeason();
+    showSyncBadge('✓ Loaded '+cloudGames.length+' games from cloud');
+  }catch(e){showSyncBadge('⚠ Pull failed');}
+}
+
+// Theme
+function toggleTheme(){
+  const isDark=document.body.classList.toggle('dark');
+  document.getElementById('theme-toggle').textContent=isDark?'☀️ Light':'🌙 Dark';
+  localStorage.setItem('wildcats_theme',isDark?'dark':'light');
+}
+function applyTheme(){
+  const saved=localStorage.getItem('wildcats_theme');
+  if(saved==='dark'){document.body.classList.add('dark');document.getElementById('theme-toggle').textContent='☀️ Light';}
+  else{document.body.classList.remove('dark');document.getElementById('theme-toggle').textContent='🌙 Dark';}
+}
+
+// Season view toggle
+let currentSeasonView='results';
+function setSeasonView(v){
+  currentSeasonView=v;
+  ['results','stats','mins'].forEach(n=>{
+    const el=document.getElementById('sv-'+n);
+    if(el)el.style.display=n===v?'block':'none';
+    const btn=document.getElementById('sv-'+n+'-btn');
+    if(btn){btn.className=n===v?'btn sv-btn-active':'btn';}
+  });
+  document.getElementById('game-detail-panel').style.display='none';
+}
+
+function openGameDetail(idx){
+  const g=state.games[idx];if(!g)return;
+  const panel=document.getElementById('game-detail-panel');
+  const title=document.getElementById('gdp-title');
+  const content_el=document.getElementById('gdp-content');
+  // hide views, show panel
+  ['results','stats','mins'].forEach(n=>{const el=document.getElementById('sv-'+n);if(el)el.style.display='none';});
+  panel.style.display='block';
+  const roundLabel=g.round?'Round '+g.round:'Game';
+  title.textContent=roundLabel+' — vs '+g.opponent;
+  const sorted=[...state.players].sort((a,b)=>a.id-b.id);
+  const diff=(g.scoreHome||0)-(g.scoreAway||0);
+  const marginText=diff===0?'Draw':((diff>0?'Eltham':(g.opponent||'Opp'))+' won by '+Math.abs(diff)+' point'+(Math.abs(diff)===1?'':'s'));
+  let html=`<div class="card" style="margin-bottom:10px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+      <div style="font-size:13px;color:var(--muted);">${g.date}${g.time?' · '+g.time:''}${g.venue?' · '+g.venue:''}</div>
+      <button class="btn" style="padding:5px 10px;font-size:12px;" onclick="exportTimelineForGame(${idx})">⬇ Export</button>
+    </div>
+    <div style="display:flex;align-items:center;justify-content:center;gap:20px;padding:12px 0;">
+      <div style="text-align:center;"><div style="font-size:12px;color:var(--muted);margin-bottom:4px;">Eltham</div><div style="font-family:DM Mono,monospace;font-size:36px;font-weight:700;color:${diff>0?'var(--green)':'var(--text)'};">${g.scoreHome||0}</div></div>
+      <div style="font-size:13px;color:var(--muted);">vs</div>
+      <div style="text-align:center;"><div style="font-size:12px;color:var(--muted);margin-bottom:4px;">${g.opponent||'Opp'}</div><div style="font-family:DM Mono,monospace;font-size:36px;font-weight:700;color:${diff<0?'var(--red)':'var(--text)'};">${g.scoreAway||0}</div></div>
+    </div>
+    <div style="text-align:center;font-size:12px;color:var(--muted);font-style:italic;">${marginText}</div>
+  </div>`;
+  // player stats table
+  html+=`<div class="card" style="padding:10px 0;margin-bottom:10px;"><div class="sec-label" style="padding:0 14px 8px;">Player stats</div><div style="overflow-x:auto;"><table class="rtbl"><thead><tr><th>Player</th><th>MIN</th><th>PTS</th><th>FT</th><th>FG</th><th>FG%</th><th>AST</th><th>REB</th><th>STL</th><th>BLK</th><th>TO</th><th>FL</th></tr></thead><tbody>`;
+  sorted.forEach(p=>{
+    const m=g.summary?g.summary.minutes[p.id]||0:0;
+    const s=g.summary&&g.summary.stats?g.summary.stats[p.id]||emptyStats():emptyStats();
+    const fg=s.fga>0?Math.round(s.fgm/s.fga*100)+'%':'—';
+    html+=`<tr><td><span style="font-size:10px;color:var(--muted);font-family:DM Mono,monospace;">${p.num}</span> ${p.name}</td><td style="font-family:DM Mono,monospace;font-size:11px;">${fmtMins(m)}</td><td>${s.pts||0}</td><td>${s.ftm||0}/${s.fta||0}</td><td>${s.fgm}/${s.fga}</td><td style="color:var(--muted);">${fg}</td><td>${s.ast}</td><td>${s.reb}</td><td>${s.stl}</td><td>${s.blk}</td><td style="color:var(--red);">${s.tov}</td><td style="color:var(--amber);">${s.foul||0}</td></tr>`;
+  });
+  html+=`</tbody></table></div></div>`;
+  // timeline
+  if(g.timeline&&g.timeline.length>0){
+    html+=`<div class="card"><div class="sec-label" style="margin-bottom:8px;">Timeline</div>`;
+    const quarters={};
+    g.timeline.forEach(ev=>{const q='Q'+(ev.q||1);if(!quarters[q])quarters[q]=[];quarters[q].push(ev);});
+    const oppName=g.opponent||'Opponent';
+    ['Q1','Q2','Q3','Q4'].forEach(q=>{
+      if(!quarters[q])return;
+      html+=`<div style="margin-bottom:12px;"><div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:6px;padding-bottom:4px;border-bottom:1px solid var(--border);">${q}</div>`;
+      quarters[q].forEach(ev=>{
+        const icon=TL_ICONS[ev.type]||'●';const cls=TL_CLASS[ev.type]||'stat';
+        let title='';
+        switch(ev.type){
+          case 'pts_1':title=ev.data.player+' — Free throw made';break;
+          case 'pts_2':title=ev.data.player+' — Field goal (+2)';break;
+          case 'pts_3':title=ev.data.player+' — Three pointer (+3)';break;
+          case 'opp_pts':title=oppName+' — +'+ev.data.pts+' pts';break;
+          case 'sub_on':title='Sub on: '+ev.data.player;break;
+          case 'sub_off':title='Sub off: '+ev.data.player;break;
+          case 'timeout':title='Timeout — Eltham';break;
+          case 'opp_timeout':title='Timeout — '+oppName;break;
+          case 'fga':title=ev.data.player+' — Missed shot';break;
+          case 'ft_miss':title=ev.data.player+' — Free throw missed';break;
+          case 'ast':title=ev.data.player+' — Assist';break;
+          case 'reb':title=ev.data.player+' — Rebound';break;
+          case 'stl':title=ev.data.player+' — Steal';break;
+          case 'blk':title=ev.data.player+' — Block';break;
+          case 'tov':title=ev.data.player+' — Turnover';break;
+          case 'foul':title=ev.data.player+' — Personal foul';break;
+          case 'qend':title='End of '+q;break;
+          case 'start':title=ev.data.label||'Game started';break;
+          default:title=ev.type;
+        }
+        const isPts=ev.type==='pts_1'||ev.type==='pts_2'||ev.type==='pts_3';
+        const scoreBadge=(isPts||ev.type==='opp_pts')?`<span style="font-size:10px;font-weight:600;font-family:DM Mono,monospace;background:${isPts?'var(--green-bg)':'var(--red-bg)'};color:${isPts?'var(--green)':'var(--red)'};padding:2px 6px;border-radius:4px;margin-left:5px;">${ev.scoreHome}–${ev.scoreAway}</span>`:'';
+        html+=`<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid rgba(0,0,0,0.04);">
+          <div style="font-family:DM Mono,monospace;font-size:11px;color:var(--muted);min-width:36px;">${ev.ts}</div>
+          <div class="tl-icon ${cls}" style="width:24px;height:24px;font-size:12px;flex-shrink:0;">${icon}</div>
+          <div style="font-size:12px;color:var(--text);">${title}${scoreBadge}</div>
+        </div>`;
+      });
+      html+='</div>';
+    });
+    html+='</div>';
+  }
+  content_el.innerHTML=html;
+}
+
+function closeGameDetail(){
+  document.getElementById('game-detail-panel').style.display='none';
+  setSeasonView(currentSeasonView);
+}
+
+function exportTimelineForGame(idx){
+  const sel=document.getElementById('tl-game-sel');
+  // temporarily set selector to this game and export
+  const prevVal=sel?sel.value:'0';
+  if(sel)sel.value=idx;
+  exportTimeline();
+  if(sel)sel.value=prevVal;
+}
+
+load();
+applyTheme();
+</script>
+</body>
+</html>
