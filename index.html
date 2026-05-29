@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -165,6 +164,14 @@ input:focus,select:focus{border-color:var(--accent);}
 .pts-btn.away{border-color:rgba(220,38,38,0.4);color:var(--red);}
 .undo-score{font-size:11px;color:var(--muted);text-align:center;margin-top:6px;cursor:pointer;}
 .auto-tag{font-size:10px;color:var(--green);background:var(--green-bg);border-radius:4px;padding:2px 5px;margin-left:4px;}
+/* game type toggle */
+.game-type-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.game-type-btn{padding:12px 8px;border-radius:var(--rs);border:1px solid var(--border2);background:var(--surface2);color:var(--muted);cursor:pointer;font-family:'DM Sans',sans-serif;text-align:center;-webkit-user-select:none;transition:all 0.1s;}
+.game-type-btn.active{background:var(--accent);border-color:var(--accent);color:#fff;}
+.game-type-btn:active{transform:scale(0.97);}
+.gt-title{font-size:14px;font-weight:600;line-height:1.3;}
+.gt-sub{font-size:11px;opacity:0.8;margin-top:2px;}
+.game-mode-badge{font-size:10px;font-weight:600;padding:2px 7px;border-radius:4px;background:var(--accent-bg);color:var(--accent);margin-left:6px;}
 
 /* ROSTER TABLE */
 .roster-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;}
@@ -294,6 +301,27 @@ table.stbl td:first-child{text-align:left;font-weight:500;}
 <div id="screen-pregame" class="screen active">
   <div class="card">
     <div class="sec-label">Game details</div>
+    <!-- Game type toggle -->
+    <div class="field">
+      <div class="field-label">Game type</div>
+      <div class="game-type-row">
+        <button class="game-type-btn active" id="gt-rep" onclick="setGameType('rep')">
+          <div class="gt-title">Rep</div>
+          <div class="gt-sub">4 × 10 min</div>
+        </button>
+        <button class="game-type-btn" id="gt-domestic" onclick="setGameType('domestic')">
+          <div class="gt-title">Domestic</div>
+          <div class="gt-sub">2 × 20 min</div>
+        </button>
+      </div>
+    </div>
+    <!-- Domestic period length (hidden for rep) -->
+    <div class="field" id="domestic-duration-field" style="display:none;">
+      <div class="field-label">Period length (minutes)</div>
+      <input type="number" id="g-period-mins" value="20" min="5" max="40"
+        oninput="document.getElementById('gt-domestic').querySelector('.gt-sub').textContent='2 × '+this.value+' min'"
+        style="width:100%;background:var(--surface2);border:1px solid var(--border2);border-radius:var(--rs);color:var(--text);font-family:DM Sans,sans-serif;font-size:15px;padding:10px 12px;outline:none;-webkit-appearance:none;"/>
+    </div>
     <div class="two-col">
       <div class="field"><div class="field-label">Date</div><input type="date" id="g-date"/></div>
       <div class="field"><div class="field-label">Game time</div><input type="time" id="g-time"/></div>
@@ -320,7 +348,7 @@ table.stbl td:first-child{text-align:left;font-weight:500;}
         <div class="game-meta-line" id="game-meta">—</div>
       </div>
       <div style="display:flex;flex-direction:column;align-items:flex-end;gap:7px;">
-        <div class="q-bar">
+        <div class="q-bar" id="period-bar">
           <button class="q-btn" id="q1" onclick="setQuarter(1)">Q1</button>
           <button class="q-btn" id="q2" onclick="setQuarter(2)">Q2</button>
           <button class="q-btn" id="q3" onclick="setQuarter(3)">Q3</button>
@@ -555,7 +583,51 @@ async function sbLoadGames(){
 async function sbDeleteGame(gameId){
   return await sbFetch('games?game_id=eq.'+String(gameId),{method:'DELETE'});
 }
-const Q_SECS=600;
+const Q_SECS_REP=600;   // 10 min
+const Q_SECS_DOM_DEFAULT=1200; // 20 min
+let currentGameType='rep';  // 'rep' or 'domestic'
+
+function setGameType(type){
+  currentGameType=type;
+  document.getElementById('gt-rep').classList.toggle('active',type==='rep');
+  document.getElementById('gt-domestic').classList.toggle('active',type==='domestic');
+  const durField=document.getElementById('domestic-duration-field');
+  if(durField)durField.style.display=type==='domestic'?'':'none';
+  // update sub labels
+  const mins=parseInt(document.getElementById('g-period-mins')?.value)||20;
+  document.getElementById('gt-rep').querySelector('.gt-sub').textContent='4 × 10 min';
+  document.getElementById('gt-domestic').querySelector('.gt-sub').textContent='2 × '+mins+' min';
+}
+
+function getQSecs(){
+  if(currentGameType==='domestic'){
+    const mins=parseInt(document.getElementById('g-period-mins')?.value)||20;
+    return mins*60;
+  }
+  return Q_SECS_REP;
+}
+
+function getPeriodCount(){return currentGameType==='domestic'?2:4;}
+
+function getPeriodLabel(n){
+  return currentGameType==='domestic'?'H'+n:'Q'+n;
+}
+
+function renderPeriodBar(game){
+  const bar=document.getElementById('period-bar');if(!bar)return;
+  const count=game?((game.gameType==='domestic')?2:4):4;
+  const isDom=game?game.gameType==='domestic':false;
+  bar.innerHTML='';
+  for(let i=1;i<=count;i++){
+    const btn=document.createElement('button');
+    btn.className='q-btn';btn.id='q'+i;
+    btn.textContent=isDom?'H'+i:'Q'+i;
+    btn.onclick=()=>setQuarter(i);
+    if(game&&game.quarter===i)btn.classList.add('active');
+    else if(game&&i<game.quarter)btn.classList.add('done');
+    bar.appendChild(btn);
+  }
+}
 const SQUAD=[
   {id:4, num:'#4', name:'Elara Jewell'},
   {id:6, num:'#6', name:'Grace Burslem'},
@@ -654,7 +726,11 @@ function load(){
   document.getElementById('g-date').value=new Date().toISOString().split('T')[0];
   document.getElementById('g-time').value='18:00';
   renderStarterGrid();
-  if(state.currentGame)showScreen('game',document.getElementById('tab-btn-game'));
+  // Restore game type from current game if one is in progress
+  if(state.currentGame){
+    currentGameType=state.currentGame.gameType||'rep';
+    showScreen('game',document.getElementById('tab-btn-game'));
+  }
   render();
   if(state.currentGame&&state.currentGame.running)startTimer();
   requestWakeLock();
@@ -702,6 +778,7 @@ function showScreen(name,el){
   document.getElementById('screen-'+name).classList.add('active');
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
   if(el)el.classList.add('active');
+  if(name==='game'){renderPeriodBar(state.currentGame);renderStatus();renderTimer();}
   if(name==='season')renderSeason();
   if(name==='squad')renderSetup();
   if(name==='timeline'){populateTlSelector();renderTimeline();}
@@ -734,10 +811,12 @@ function toggleStarter(pid){
 
 /* ── TIMELINE HELPERS ── */
 function getTimestamp(cg){
+  const periodSecs=cg.periodSecs||Q_SECS_REP;
   const remaining=Math.max(0,Math.ceil(cg.qRemaining));
-  const elapsed=Q_SECS-remaining;
+  const elapsed=Math.max(0,periodSecs-remaining);
   const m=Math.floor(elapsed/60);const s=elapsed%60;
-  return'Q'+cg.quarter+' '+m+':'+String(s).padStart(2,'0');
+  const prefix=cg.gameType==='domestic'?'H':'Q';
+  return prefix+cg.quarter+' '+m+':'+String(s).padStart(2,'0');
 }
 
 function addEvent(type,data){
@@ -746,30 +825,29 @@ function addEvent(type,data){
   const idx=cg.timeline.length;
   cg.timeline.push({
     id:Date.now()+idx,ts:getTimestamp(cg),q:cg.quarter,
+    isDom:cg.gameType==='domestic',
     type,data,scoreHome:cg.scoreHome,scoreAway:cg.scoreAway
   });
   return idx;
 }
 
 /* ── RENDER ── */
-function render(){renderOnCourtSection();renderActionPanel();renderRosterTable();renderScores();renderStatus();renderTimer();}
+function render(){renderOnCourtSection();renderActionPanel();renderRosterTable();renderScores();renderStatus();renderTimer();renderPeriodBar(state.currentGame);}
 
 function renderStatus(){
   const cg=state.currentGame;
   const badge=document.getElementById('status-badge');
   const meta=document.getElementById('game-meta');
   if(!cg){badge.className='badge badge-idle';badge.textContent='Idle';if(meta)meta.textContent='—';return;}
+  const modeLabel=cg.gameType==='domestic'?'Domestic':'Rep';
   const parts=[cg.date,cg.time,'vs '+cg.opponent,cg.venue].filter(Boolean);
-  if(meta)meta.textContent=parts.join(' · ');
+  if(meta)meta.innerHTML=parts.join(' · ')+'<span class="game-mode-badge">'+modeLabel+'</span>';
   if(cg.timeout){badge.className='badge badge-to';badge.textContent='Timeout';}
   else if(cg.running){badge.className='badge badge-live';badge.textContent='Live';}
   else if(cg.ended){badge.className='badge badge-done';badge.textContent='Done';}
   else{badge.className='badge badge-paused';badge.textContent='Paused';}
   document.getElementById('pause-btn').textContent=cg.running?'Pause':'Resume';
-  for(let q=1;q<=4;q++){
-    const b=document.getElementById('q'+q);b.className='q-btn';
-    if(cg.quarter===q)b.classList.add('active');else if(q<cg.quarter)b.classList.add('done');
-  }
+  renderPeriodBar(cg);
   const tb=document.getElementById('to-banner');
   if(cg.timeout){tb.style.display='block';document.getElementById('to-team').textContent=cg.timeoutTeam;}
   else tb.style.display='none';
@@ -778,10 +856,14 @@ function renderStatus(){
 
 function renderTimer(){
   const cg=state.currentGame;
-  const secs=cg?Math.max(0,Math.ceil(cg.qRemaining)):Q_SECS;
+  const fallback=cg?(cg.periodSecs||Q_SECS_REP):Q_SECS_REP;
+  const secs=cg?Math.max(0,Math.ceil(cg.qRemaining)):fallback;
   const el=document.getElementById('game-timer');
   el.textContent=Math.floor(secs/60)+':'+String(secs%60).padStart(2,'0');
-  el.className='timer'+(secs<=30&&cg?' urgent':secs<=60&&cg?' warn':'');
+  // warn thresholds scale with period length
+  const warnAt=Math.min(60,Math.floor((cg?cg.periodSecs||Q_SECS_REP:Q_SECS_REP)*0.05));
+  const urgentAt=Math.min(30,Math.floor(warnAt*0.5));
+  el.className='timer'+(secs<=urgentAt&&cg?' urgent':secs<=warnAt&&cg?' warn':'');
 }
 
 function renderOnCourtSection(){
@@ -918,10 +1000,14 @@ function renderTimeline(){
   });
 
   const oppName=source.opponent||'Opponent';
+  const isDomTl=source.gameType==='domestic';
+  const tlPeriodKeys=isDomTl?['Q1','Q2']:['Q1','Q2','Q3','Q4'];
+  const tlPeriodLabels=isDomTl?{'Q1':'H1','Q2':'H2'}:{'Q1':'Q1','Q2':'Q2','Q3':'Q3','Q4':'Q4'};
   let html='';
-  ['Q1','Q2','Q3','Q4'].forEach(q=>{
+  tlPeriodKeys.forEach(q=>{
     if(!quarters[q])return;
-    html+=`<div class="tl-quarter-block"><div class="tl-q-label">${q}</div>`;
+    const qLabel=tlPeriodLabels[q]||q;
+    html+=`<div class="tl-quarter-block"><div class="tl-q-label">${qLabel}</div>`;
     quarters[q].forEach(ev=>{
       const icon=TL_ICONS[ev.type]||'●';
       const cls=TL_CLASS[ev.type]||'stat';
@@ -949,7 +1035,7 @@ function renderTimeline(){
         case 'blk':  title=ev.data.player+' — Block'; break;
         case 'tov':  title=ev.data.player+' — Turnover'; break;
         case 'foul': title=ev.data.player+' — Personal foul'; break;
-        case 'qend': title='End of '+q; subtext='Score: '+score; break;
+        case 'qend': title='End of '+qLabel; subtext='Score: '+score; break;
         case 'start': title=ev.data.label||'Game started'; break;
         default: title=ev.type;
       }
@@ -963,7 +1049,7 @@ function renderTimeline(){
       </div>`;
     });
     html+='</div>';
-  });
+    });
   content.innerHTML=html;
 }
 
@@ -1016,8 +1102,8 @@ function exportTimeline(){
     });
   }
 
-  const roundStr=source.round?'Round '+source.round+' — ':'';const html=`<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Wildcats — ${roundStr}${source.date} vs ${oppName}</title>
+  const roundStr=source.round?'Round '+source.round+' — ':'';const modeStr=source.gameType==='domestic'?' (Domestic)':' (Rep)';const html=`<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Wildcats — ${roundStr}${source.date} vs ${oppName}${modeStr}</title>
 <style>
 body{font-family:Arial,sans-serif;padding:20px;color:#1a1a2e;max-width:800px;margin:0 auto;}
 h1{font-size:20px;margin-bottom:4px;}
@@ -1056,22 +1142,26 @@ td{padding:7px 8px;border-bottom:1px solid #eee;}
 
 /* ── GAME CONTROL ── */
 function startGame(){
+  document.getElementById('warn-starters').style.display='none';
   if(pendingStarters.size===0){
     document.getElementById('warn-starters').style.display='block';
+    document.getElementById('warn-starters').textContent='⚠ Select at least 1 starter before starting the game';
     return;
   }
-  document.getElementById('warn-starters').style.display='none';
   const date=document.getElementById('g-date').value;
   const time=document.getElementById('g-time').value;
   const round=document.getElementById('g-round').value.trim();
   const opp=document.getElementById('g-opp').value.trim();
   const venue=document.getElementById('g-venue').value.trim();
+  const gameType=currentGameType;
+  const periodSecs=getQSecs();
   const starters=Array.from(pendingStarters);
   state.currentGame={
     id:Date.now(),date:fmtDate(date),time:fmtTime(time),round:round,
     opponent:opp||'Unknown',venue:venue,
+    gameType:gameType,periodSecs:periodSecs,
     quarter:1,running:true,ended:false,timeout:false,timeoutTeam:'',
-    elapsed:0,lastTick:Date.now(),qRemaining:Q_SECS,
+    elapsed:0,lastTick:Date.now(),qRemaining:periodSecs,
     onCourt:[...starters],stints:{},minutes:{},stats:{},
     scoreHome:0,scoreAway:0,timeline:[]
   };
@@ -1083,7 +1173,9 @@ function startGame(){
   actionLog=[];oppScoreLog=[];selectedPid=null;
   startTimer();save();
   showScreen('game',document.getElementById('tab-btn-game'));
-  render();requestWakeLock();
+  render();
+  renderPeriodBar(state.currentGame);
+  requestWakeLock();
 }
 
 function fmtDate(d){if(!d)return'';try{const p=d.split('-');return p[2]+'/'+p[1]+'/'+p[0];}catch(e){return d;}}
@@ -1128,14 +1220,13 @@ function callTimeout(team){
   save();render();
 }
 
-function resetQClock(){const cg=state.currentGame;if(!cg)return;cg.qRemaining=Q_SECS;save();renderTimer();}
+function resetQClock(){const cg=state.currentGame;if(!cg)return;cg.qRemaining=cg.periodSecs||Q_SECS_REP;save();renderTimer();}
 
 function setQuarter(q){
   const cg=state.currentGame;if(!cg)return;
-  // Log end of previous quarter if transitioning forward
   if(q>cg.quarter){addEvent('qend',{});}
-  cg.quarter=q;cg.qRemaining=Q_SECS;
-  save();renderStatus();renderTimer();
+  cg.quarter=q;cg.qRemaining=cg.periodSecs||Q_SECS_REP;
+  save();renderStatus();renderTimer();renderPeriodBar(cg);
 }
 
 function endGame(){
@@ -1274,11 +1365,12 @@ function renderSeason(){
         const oppWon=diff<0;const elthamWon=diff>0;
         const marginText=diff===0?'Draw':((elthamWon?'Eltham':(g.opponent||'Opponent'))+' won by '+Math.abs(diff)+' point'+(Math.abs(diff)===1?'':'s'));
         const roundLabel=g.round?'Round '+g.round:'Game';
+        const modeTag=g.gameType==='domestic'?' · Domestic':' · Rep';
         const elthamScore=g.scoreHome||0;const oppScore=g.scoreAway||0;
         return`<div class="round-block">
           <div class="round-header">
             <div class="round-header-title">${roundLabel}</div>
-            <div class="round-header-date">${g.date}${g.time?' · '+g.time:''}</div>
+            <div class="round-header-date">${g.date}${g.time?' · '+g.time:''}${modeTag}</div>
           </div>
           <div class="game-card" onclick="openGameDetail(${idx})">
             <div class="game-card-teams">
@@ -1508,9 +1600,13 @@ function openGameDetail(idx){
     const quarters={};
     g.timeline.forEach(ev=>{const q='Q'+(ev.q||1);if(!quarters[q])quarters[q]=[];quarters[q].push(ev);});
     const oppName=g.opponent||'Opponent';
-    ['Q1','Q2','Q3','Q4'].forEach(q=>{
+    const isDomGame=g.gameType==='domestic';
+    const periodKeys=isDomGame?['Q1','Q2']:['Q1','Q2','Q3','Q4'];
+    const periodDisplay=isDomGame?{'Q1':'H1','Q2':'H2'}:{'Q1':'Q1','Q2':'Q2','Q3':'Q3','Q4':'Q4'};
+    periodKeys.forEach(q=>{
+      const qLabel=periodDisplay[q]||q;  // H1/H2 for domestic, Q1-Q4 for rep
       if(!quarters[q])return;
-      html+=`<div style="margin-bottom:12px;"><div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:6px;padding-bottom:4px;border-bottom:1px solid var(--border);">${q}</div>`;
+      html+=`<div style="margin-bottom:12px;"><div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:6px;padding-bottom:4px;border-bottom:1px solid var(--border);">${qLabel}</div>`;
       quarters[q].forEach(ev=>{
         const icon=TL_ICONS[ev.type]||'●';const cls=TL_CLASS[ev.type]||'stat';
         let title='';
@@ -1531,7 +1627,7 @@ function openGameDetail(idx){
           case 'blk':title=ev.data.player+' — Block';break;
           case 'tov':title=ev.data.player+' — Turnover';break;
           case 'foul':title=ev.data.player+' — Personal foul';break;
-          case 'qend':title='End of '+q;break;
+          case 'qend':title='End of '+qLabel;break;
           case 'start':title=ev.data.label||'Game started';break;
           default:title=ev.type;
         }
