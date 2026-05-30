@@ -295,6 +295,7 @@ table.stbl td:first-child{text-align:left;font-weight:500;}
   <button class="tab" id="tab-btn-timeline" onclick="showScreen('timeline',this)">Timeline</button>
   <button class="tab" id="tab-btn-season" onclick="showScreen('season',this)">Season</button>
   <button class="tab" id="tab-btn-squad" onclick="showScreen('squad',this)">Squad</button>
+  <button class="tab" id="tab-btn-data" onclick="showScreen('data',this)">Data</button>
 </div>
 
 <!-- ═══ PREGAME ═══ -->
@@ -434,7 +435,7 @@ table.stbl td:first-child{text-align:left;font-weight:500;}
     <div class="sec-label" style="padding:0 14px 6px;">All players <span style="font-weight:400;text-transform:none;letter-spacing:0;font-size:11px;color:var(--muted);">— tap ● to sub on/off</span></div>
     <div class="roster-wrap">
       <table class="rtbl">
-        <thead><tr><th>Player</th><th>MIN</th><th>FTM</th><th>FTA</th><th>FGM</th><th>FGA</th><th>FG%</th><th>AST</th><th>REB</th><th>STL</th><th>BLK</th><th>TO</th><th>FL</th></tr></thead>
+        <thead><tr><th>Player</th><th>MIN</th><th>FTM</th><th>FTA</th><th>FT%</th><th>FGM</th><th>FGA</th><th>FG%</th><th>AST</th><th>REB</th><th>STL</th><th>BLK</th><th>TO</th><th>FL</th></tr></thead>
         <tbody id="roster-body"></tbody>
       </table>
     </div>
@@ -475,7 +476,7 @@ table.stbl td:first-child{text-align:left;font-weight:500;}
       <div class="sec-label">Season stats</div>
       <div style="font-size:12px;color:var(--muted);margin-bottom:8px;"><span id="game-count">0</span> games played</div>
       <div class="tbl-wrap">
-        <table class="stbl"><thead><tr><th style="min-width:100px;">Player</th><th>PTS</th><th>FTM</th><th>FTA</th><th>FGM</th><th>FGA</th><th>FG%</th><th>AST</th><th>REB</th><th>STL</th><th>BLK</th><th>TO</th><th>FL</th></tr></thead><tbody id="season-stats-body"></tbody></table>
+        <table class="stbl"><thead><tr><th style="min-width:100px;">Player</th><th>PTS</th><th>FTM</th><th>FTA</th><th>FT%</th><th>FGM</th><th>FGA</th><th>FG%</th><th>AST</th><th>REB</th><th>STL</th><th>BLK</th><th>TO</th><th>FL</th></tr></thead><tbody id="season-stats-body"></tbody></table>
       </div>
     </div>
   </div>
@@ -510,20 +511,29 @@ table.stbl td:first-child{text-align:left;font-weight:500;}
       <button class="btn btn-primary" style="padding:9px 14px;white-space:nowrap;" onclick="addPlayer()">Add</button>
     </div>
   </div>
+  <div class="card"><div class="sec-label">Danger zone</div><button class="btn btn-red" style="width:100%;" onclick="clearAll()">Clear all game data</button></div>
+</div>
+
+<!-- ═══ DATA ═══ -->
+<div id="screen-data" class="screen">
   <div class="card">
-    <div class="sec-label">Backup & restore</div>
-    <div class="backup-info">Export data after every game. Restore loads it back if needed.</div>
+    <div class="sec-label">Cloud sync</div>
+    <div class="backup-info">Sync games to the cloud so any device can access the full season.</div>
     <div class="g2" style="margin-bottom:8px;">
       <button class="btn btn-green" onclick="pushAllToCloud()">☁ Sync all to cloud</button>
       <button class="btn btn-green" onclick="pullFromCloud()">↓ Pull from cloud</button>
     </div>
+  </div>
+  <div class="card">
+    <div class="sec-label">Export</div>
+    <div class="backup-info">CSV contains one row per player per game — ready for Excel or Google Sheets charts.</div>
+    <button class="btn btn-primary" style="width:100%;margin-bottom:8px;" onclick="exportCSV()">⬇ Export analytics CSV</button>
     <div class="g2">
       <button class="btn" onclick="exportData()">Export JSON backup</button>
-      <button class="btn" onclick="document.getElementById('import-file').click()">Restore backup</button>
+      <button class="btn" onclick="document.getElementById('import-file').click()">Restore JSON backup</button>
     </div>
     <input type="file" id="import-file" accept=".json" style="display:none;" onchange="importData(event)"/>
   </div>
-  <div class="card"><div class="sec-label">Danger zone</div><button class="btn btn-red" style="width:100%;" onclick="clearAll()">Clear all game data</button></div>
 </div>
 
 <!-- EDIT MODAL -->
@@ -541,7 +551,7 @@ table.stbl td:first-child{text-align:left;font-weight:500;}
 <script>
 const SK='wildcats_v10';
 const SB_URL='https://pccmmceqvlxjndphpybj.supabase.co';
-const SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBjY21tY2Vxdmx4am5kcGhweWJqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAwNTU5NDcsImV4cCI6MjA5NTYzMTk0N30.tAvIg2hRQkfvZ2Uc8nSWU0NyiNJ4MOJAqMKPx4Bk6kY';
+const SB_KEY='sb_publishable_1H4EmfPsBaMRkaSOcJHaEA_rVDBVImC';
 
 // Supabase helpers
 async function sbFetch(path, options={}){
@@ -551,21 +561,24 @@ async function sbFetch(path, options={}){
       'apikey': SB_KEY,
       'Authorization': 'Bearer '+SB_KEY,
       'Content-Type': 'application/json',
-      'Prefer': options.prefer||'',
+      ...(options.prefer?{'Prefer':options.prefer}:{}),
       ...options.headers
     }
   });
-  if(!res.ok){const t=await res.text();console.error('Supabase error:',t);return null;}
+  if(!res.ok){
+    const t=await res.text();
+    console.error('Supabase error:',res.status,t);
+    showSyncBadge('⚠ Cloud error: '+res.status);
+    return null;
+  }
   const text=await res.text();
   return text?JSON.parse(text):null;
 }
 
 async function sbSaveGame(game){
-  // upsert by game id
   return await sbFetch('games?on_conflict=game_id',{
     method:'POST',
-    prefer:'resolution=merge-duplicates',
-    headers:{'Prefer':'resolution=merge-duplicates'},
+    prefer:'resolution=merge-duplicates,return=minimal',
     body: JSON.stringify({
       game_id: String(game.id),
       team: 'eltham_u12_wildcats',
@@ -782,6 +795,7 @@ function showScreen(name,el){
   if(name==='season')renderSeason();
   if(name==='squad')renderSetup();
   if(name==='timeline'){populateTlSelector();renderTimeline();}
+  if(name==='data'){}  // static, nothing to render
   requestWakeLock();
 }
 
@@ -928,10 +942,11 @@ function renderRosterTable(){
       <span class="pnum-tag">${p.num}</span><span style="font-size:12px;">${p.name}</span></div>`;
     tr.appendChild(nameTd);
     const minsTd=document.createElement('td');minsTd.className='mins-cell';minsTd.textContent=fmtMins(mins);tr.appendChild(minsTd);
-    const vals=s?[s.ftm||0,s.fta||0,s.fgm,s.fga,fgpct,s.ast,s.reb,s.stl,s.blk,s.tov,s.foul||0]:['—','—','—','—','—','—','—','—','—','—','—'];
+    const ftpct=s&&s.fta>0?Math.round(s.ftm/s.fta*100)+'%':'—';
+    const vals=s?[s.ftm||0,s.fta||0,ftpct,s.fgm,s.fga,fgpct,s.ast,s.reb,s.stl,s.blk,s.tov,s.foul||0]:['—','—','—','—','—','—','—','—','—','—','—','—'];
     vals.forEach((v,i)=>{
       const td=document.createElement('td');
-      if(i===2)td.className='fgm-val';if(i===9)td.className='tov-val';if(i===10)td.style.color='var(--amber)';
+      if(i===3)td.className='fgm-val';if(i===10)td.className='tov-val';if(i===11)td.style.color='var(--amber)';
       td.textContent=v;tr.appendChild(td);
     });
     tbody.appendChild(tr);
@@ -951,12 +966,13 @@ function renderRosterTable(){
     // mins cell
     const tminsTd=document.createElement('td');tminsTd.className='mins-cell';tminsTd.style.fontWeight='700';tminsTd.textContent=fmtMins(totMins);ttr.appendChild(tminsTd);
     // stat cells
-    [totFtm,totFta,totFgm,totFga,totFgpct,totAst,totReb,totStl,totBlk,totTov,totFoul].forEach((v,i)=>{
+    const totFtpct=totFta>0?Math.round(totFtm/totFta*100)+'%':'—';
+    [totFtm,totFta,totFtpct,totFgm,totFga,totFgpct,totAst,totReb,totStl,totBlk,totTov,totFoul].forEach((v,i)=>{
       const td=document.createElement('td');
       td.style.fontWeight='700';
-      if(i===2)td.style.color='#2563eb';
-      if(i===9)td.style.color='var(--red)';
-      if(i===10)td.style.color='var(--amber)';
+      if(i===3)td.style.color='#2563eb';
+      if(i===10)td.style.color='var(--red)';
+      if(i===11)td.style.color='var(--amber)';
       td.textContent=v;ttr.appendChild(td);
     });
     tbody.appendChild(ttr);
@@ -1068,7 +1084,8 @@ function exportTimeline(){
     const m=source.summary?source.summary.minutes[p.id]||0:(source.minutes?source.minutes[p.id]||0:0);
     const s=source.summary?source.summary.stats[p.id]||emptyStats():(source.stats?source.stats[p.id]||emptyStats():emptyStats());
     const fg=s.fga>0?Math.round(s.fgm/s.fga*100)+'%':'—';
-    statsRows+=`<tr><td>${p.num}</td><td>${p.name}</td><td>${fmtMins(m)}</td><td>${s.pts||0}</td><td>${s.ftm||0}/${s.fta||0}</td><td>${s.fgm}/${s.fga}</td><td>${fg}</td><td>${s.ast}</td><td>${s.reb}</td><td>${s.stl}</td><td>${s.blk}</td><td>${s.tov}</td><td>${s.foul||0}</td></tr>`;
+    const ftpctExp=s.fta>0?Math.round((s.ftm||0)/s.fta*100)+'%':'—';
+    statsRows+=`<tr><td>${p.num}</td><td>${p.name}</td><td>${fmtMins(m)}</td><td>${s.pts||0}</td><td>${s.ftm||0}</td><td>${s.fta||0}</td><td>${ftpctExp}</td><td>${s.fgm}</td><td>${s.fga}</td><td>${fg}</td><td>${s.ast}</td><td>${s.reb}</td><td>${s.stl}</td><td>${s.blk}</td><td>${s.tov}</td><td>${s.foul||0}</td></tr>`;
   });
 
   const evLabels={
@@ -1126,7 +1143,7 @@ td{padding:7px 8px;border-bottom:1px solid #eee;}
   <div class="sc"><div class="sc-name">${oppName}</div><div class="sc-num a">${source.scoreAway||0}</div></div>
 </div>
 <h2>Player Stats</h2>
-<table><thead><tr><th>#</th><th>Player</th><th>MIN</th><th>PTS</th><th>FT</th><th>FG</th><th>FG%</th><th>AST</th><th>REB</th><th>STL</th><th>BLK</th><th>TO</th><th>FL</th></tr></thead>
+<table><thead><tr><th>#</th><th>Player</th><th>MIN</th><th>PTS</th><th>FTM</th><th>FTA</th><th>FT%</th><th>FGM</th><th>FGA</th><th>FG%</th><th>AST</th><th>REB</th><th>STL</th><th>BLK</th><th>TO</th><th>FL</th></tr></thead>
 <tbody>${statsRows}</tbody></table>
 <h2>Game Timeline</h2>
 <table><thead><tr><th>Qtr</th><th>Time</th><th>Event</th><th>Score</th></tr></thead>
@@ -1433,8 +1450,8 @@ function renderSeason(){
     return`<tr><td>${p.num} ${p.name}</td><td>${fmtMins(total)}</td><td>${fmtMins(avg)}</td><td><div class="bar-bg"><div class="bar-fill" style="width:${pct}%;background:${col};"></div></div></td></tr>`;
   }).join('');
   document.getElementById('season-stats-body').innerHTML=sorted.map(p=>{
-    const s=totStats[p.id];const fg=s.fga>0?Math.round(s.fgm/s.fga*100)+'%':'—';
-    return`<tr><td>${p.num} ${p.name}</td><td>${s.pts||0}</td><td>${s.ftm||0}</td><td>${s.fta||0}</td><td>${s.fgm}</td><td>${s.fga}</td><td>${fg}</td><td>${s.ast}</td><td>${s.reb}</td><td>${s.stl}</td><td>${s.blk}</td><td>${s.tov}</td><td style="color:var(--amber);">${s.foul||0}</td></tr>`;
+    const s=totStats[p.id];const fg=s.fga>0?Math.round(s.fgm/s.fga*100)+'%':'—';const ft=s.fta>0?Math.round(s.ftm/s.fta*100)+'%':'—';
+    return`<tr><td>${p.num} ${p.name}</td><td>${s.pts||0}</td><td>${s.ftm||0}</td><td>${s.fta||0}</td><td>${ft}</td><td>${s.fgm}</td><td>${s.fga}</td><td>${fg}</td><td>${s.ast}</td><td>${s.reb}</td><td>${s.stl}</td><td>${s.blk}</td><td>${s.tov}</td><td style="color:var(--amber);">${s.foul||0}</td></tr>`;
   }).join('');
 }
 
@@ -1509,6 +1526,62 @@ function clearAll(){
   if(!confirm('Clear all game data? Squad will be kept.'))return;
   state={players:state.players,games:[],currentGame:null};
   pendingStarters=new Set();save();render();renderStarterGrid();
+}
+
+// CSV Analytics Export
+function exportCSV(){
+  const games=state.games;
+  if(games.length===0){showSyncBadge('No games to export');return;}
+  const sorted=[...state.players].sort((a,b)=>a.id-b.id);
+  const rows=[];
+  // header
+  rows.push(['Date','Round','Opposition','Venue','Game Type','Result','Eltham Score','Opp Score',
+    'Player','#','MIN','PTS','FTM','FTA','FT%','FGM','FGA','FG%','AST','REB','STL','BLK','TO','FL'].join(','));
+  games.forEach(g=>{
+    const diff=(g.scoreHome||0)-(g.scoreAway||0);
+    const result=diff>0?'W':diff<0?'L':'D';
+    sorted.forEach(p=>{
+      const m=g.summary?g.summary.minutes[p.id]||0:0;
+      const s=g.summary&&g.summary.stats?g.summary.stats[p.id]||emptyStats():emptyStats();
+      const fg=s.fga>0?Math.round(s.fgm/s.fga*100)+'%':'';
+      const ft=s.fta>0?Math.round((s.ftm||0)/s.fta*100)+'%':'';
+      const minsStr=fmtMins(m);
+      rows.push([
+        g.date||'',
+        g.round?'R'+g.round:'',
+        '"'+(g.opponent||'').replace(/"/g,'""')+'"',
+        '"'+(g.venue||'').replace(/"/g,'""')+'"',
+        g.gameType==='domestic'?'Domestic':'Rep',
+        result,
+        g.scoreHome||0,
+        g.scoreAway||0,
+        '"'+p.name.replace(/"/g,'""')+'"',
+        p.num,
+        minsStr,
+        s.pts||0,
+        s.ftm||0,
+        s.fta||0,
+        ft,
+        s.fgm,
+        s.fga,
+        fg,
+        s.ast,
+        s.reb,
+        s.stl,
+        s.blk,
+        s.tov,
+        s.foul||0
+      ].join(','));
+    });
+  });
+  const csv=rows.join('\n');
+  const blob=new Blob([csv],{type:'text/csv'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;
+  a.download='wildcats_analytics_'+new Date().toISOString().split('T')[0]+'.csv';
+  a.click();URL.revokeObjectURL(url);
+  showSyncBadge('✓ CSV exported — '+games.length+' games, '+sorted.length+' players');
 }
 
 // Cloud sync helpers
@@ -1586,12 +1659,13 @@ function openGameDetail(idx){
     <div style="text-align:center;font-size:12px;color:var(--muted);font-style:italic;">${marginText}</div>
   </div>`;
   // player stats table
-  html+=`<div class="card" style="padding:10px 0;margin-bottom:10px;"><div class="sec-label" style="padding:0 14px 8px;">Player stats</div><div style="overflow-x:auto;"><table class="rtbl"><thead><tr><th>Player</th><th>MIN</th><th>PTS</th><th>FT</th><th>FG</th><th>FG%</th><th>AST</th><th>REB</th><th>STL</th><th>BLK</th><th>TO</th><th>FL</th></tr></thead><tbody>`;
+  html+=`<div class="card" style="padding:10px 0;margin-bottom:10px;"><div class="sec-label" style="padding:0 14px 8px;">Player stats</div><div style="overflow-x:auto;"><table class="rtbl"><thead><tr><th>Player</th><th>MIN</th><th>PTS</th><th>FTM</th><th>FTA</th><th>FT%</th><th>FGM</th><th>FGA</th><th>FG%</th><th>AST</th><th>REB</th><th>STL</th><th>BLK</th><th>TO</th><th>FL</th></tr></thead><tbody>`;
   sorted.forEach(p=>{
     const m=g.summary?g.summary.minutes[p.id]||0:0;
     const s=g.summary&&g.summary.stats?g.summary.stats[p.id]||emptyStats():emptyStats();
     const fg=s.fga>0?Math.round(s.fgm/s.fga*100)+'%':'—';
-    html+=`<tr><td><span style="font-size:10px;color:var(--muted);font-family:DM Mono,monospace;">${p.num}</span> ${p.name}</td><td style="font-family:DM Mono,monospace;font-size:11px;">${fmtMins(m)}</td><td>${s.pts||0}</td><td>${s.ftm||0}/${s.fta||0}</td><td>${s.fgm}/${s.fga}</td><td style="color:var(--muted);">${fg}</td><td>${s.ast}</td><td>${s.reb}</td><td>${s.stl}</td><td>${s.blk}</td><td style="color:var(--red);">${s.tov}</td><td style="color:var(--amber);">${s.foul||0}</td></tr>`;
+    const ftpctGdp=s.fta>0?Math.round((s.ftm||0)/s.fta*100)+'%':'—';
+    html+=`<tr><td><span style="font-size:10px;color:var(--muted);font-family:DM Mono,monospace;">${p.num}</span> ${p.name}</td><td style="font-family:DM Mono,monospace;font-size:11px;">${fmtMins(m)}</td><td>${s.pts||0}</td><td>${s.ftm||0}</td><td>${s.fta||0}</td><td style="color:var(--muted);">${ftpctGdp}</td><td>${s.fgm}</td><td>${s.fga}</td><td style="color:var(--muted);">${fg}</td><td>${s.ast}</td><td>${s.reb}</td><td>${s.stl}</td><td>${s.blk}</td><td style="color:var(--red);">${s.tov}</td><td style="color:var(--amber);">${s.foul||0}</td></tr>`;
   });
   html+=`</tbody></table></div></div>`;
   // timeline
