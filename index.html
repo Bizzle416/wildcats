@@ -1536,7 +1536,7 @@ function exportCSV(){
   const rows=[];
   // header
   rows.push(['Date','Round','Opposition','Venue','Game Type','Result','Eltham Score','Opp Score',
-    'Player','#','MIN','PTS','FTM','FTA','FT%','FGM','FGA','FG%','AST','REB','STL','BLK','TO','FL'].join(','));
+    'Player','#','MIN (decimal)','PTS','FTM','FTA','FT%','FGM','FGA','FG%','AST','REB','STL','BLK','TO','FL'].join(','));
   games.forEach(g=>{
     const diff=(g.scoreHome||0)-(g.scoreAway||0);
     const result=diff>0?'W':diff<0?'L':'D';
@@ -1545,7 +1545,7 @@ function exportCSV(){
       const s=g.summary&&g.summary.stats?g.summary.stats[p.id]||emptyStats():emptyStats();
       const fg=s.fga>0?Math.round(s.fgm/s.fga*100)+'%':'';
       const ft=s.fta>0?Math.round((s.ftm||0)/s.fta*100)+'%':'';
-      const minsStr=fmtMins(m);
+      const minsStr=(Math.round(m*10)/10).toFixed(1);
       rows.push([
         g.date||'',
         g.round?'R'+g.round:'',
