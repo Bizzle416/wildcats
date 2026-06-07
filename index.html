@@ -279,22 +279,21 @@ table.stbl td:first-child{text-align:left;font-weight:500;}
 .backup-info{font-size:12px;color:var(--muted);line-height:1.6;margin-bottom:10px;}
 
 /* SHOT CHART */
-.court-container{position:relative;width:100%;background:var(--surface);border-radius:var(--r);overflow:hidden;touch-action:none;}
-.court-svg{width:100%;height:auto;display:block;cursor:crosshair;}
-/* shot modal styles injected inline when created dynamically */
-.shot-pending-dot{position:absolute;width:14px;height:14px;border-radius:50%;background:var(--accent);border:2px solid #fff;transform:translate(-50%,-50%);pointer-events:none;box-shadow:0 0 8px rgba(59,130,246,0.6);}
+
+
+
 .shot-confirm-row{display:flex;gap:8px;margin-top:12px;}
-.sc-filters{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;}
-.sc-filter-btn{padding:6px 12px;border-radius:20px;font-size:12px;font-weight:500;border:1px solid var(--border2);background:var(--surface2);color:var(--muted);cursor:pointer;font-family:'DM Sans',sans-serif;-webkit-user-select:none;}
+
+
 .sc-filter-btn.active{background:var(--accent);border-color:var(--accent);color:#fff;}
 .sc-filter-btn:active{opacity:0.7;}
-.shot-legend{display:flex;gap:12px;align-items:center;font-size:12px;color:var(--muted);margin-bottom:8px;flex-wrap:wrap;}
-.legend-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;}
-.shot-stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(80px,1fr));gap:8px;margin-bottom:10px;}
-.shot-stat-box{background:var(--surface2);border-radius:var(--rs);padding:10px 8px;text-align:center;}
-.shot-stat-label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:3px;}
-.shot-stat-val{font-size:18px;font-weight:600;color:var(--text);}
-.zone-table{width:100%;border-collapse:collapse;font-size:12px;margin-top:8px;}
+
+
+
+
+
+
+
 .zone-table th{text-align:left;padding:5px 6px;color:var(--muted);font-size:10px;font-weight:600;text-transform:uppercase;border-bottom:1px solid var(--border);}
 .zone-table td{padding:7px 6px;border-bottom:1px solid var(--border);color:var(--text);}
 .zone-table tr:last-child td{border-bottom:none;}
@@ -317,7 +316,6 @@ table.stbl td:first-child{text-align:left;font-weight:500;}
   <button class="tab" id="tab-btn-season" onclick="showScreen('season',this)">Season</button>
   <button class="tab" id="tab-btn-squad" onclick="showScreen('squad',this)">Squad</button>
   <button class="tab" id="tab-btn-data" onclick="showScreen('data',this)">Data</button>
-  <button class="tab" id="tab-btn-shots" onclick="showScreen('shots',this)">Shot Chart</button>
 </div>
 
 <!-- ═══ PREGAME ═══ -->
@@ -390,10 +388,7 @@ table.stbl td:first-child{text-align:left;font-weight:500;}
     </div>
   </div>
   <div class="to-banner" id="to-banner">TIMEOUT — <span id="to-team"></span></div>
-  <!-- Companion link button -->
-  <div id="companion-bar" style="display:none;margin-bottom:6px;">
-    <button onclick="showCompanionLink()" class="btn" style="width:100%;font-size:12px;color:var(--purple);border-color:rgba(124,58,237,0.3);background:var(--purple-bg);">🎯 Share shot companion link with Person 2</button>
-  </div>
+
 
   <!-- S2 + S3: ON COURT (left) + ACTION (right) side by side -->
   <div class="warn-bar" id="warn5">5 players on court — sub someone off first</div>
@@ -539,6 +534,10 @@ table.stbl td:first-child{text-align:left;font-weight:500;}
       <button class="btn btn-primary" style="padding:9px 14px;white-space:nowrap;" onclick="addPlayer()">Add</button>
     </div>
   </div>
+  <div class="card">
+    <div class="sec-label">Squad tools</div>
+    <button class="btn btn-green" style="width:100%;margin-bottom:8px;" onclick="restoreDefaultSquad()">↺ Restore default squad (keeps game data)</button>
+  </div>
   <div class="card"><div class="sec-label">Danger zone</div><button class="btn btn-red" style="width:100%;" onclick="clearAll()">Clear all game data</button></div>
 </div>
 
@@ -564,96 +563,7 @@ table.stbl td:first-child{text-align:left;font-weight:500;}
   </div>
 </div>
 
-<!-- ═══ SHOT CHART ═══ -->
-<div id="screen-shots" class="screen">
-  <!-- Filters -->
-  <div class="card">
-    <div class="sec-label">Shot chart</div>
-    <div class="sc-filters" id="sc-game-filter">
-      <button class="sc-filter-btn active" onclick="setShotGame('all',this)">All Games</button>
-    </div>
-    <div class="sc-filters" id="sc-player-filter">
-      <button class="sc-filter-btn active" onclick="setShotPlayer('all',this)">All Players</button>
-    </div>
-  </div>
 
-  <!-- Stats summary -->
-  <div class="card">
-    <div class="shot-stats-grid" id="shot-stats-grid">
-      <div class="shot-stat-box"><div class="shot-stat-label">Shots</div><div class="shot-stat-val" id="sc-total">0</div></div>
-      <div class="shot-stat-box"><div class="shot-stat-label">Made</div><div class="shot-stat-val" id="sc-made" style="color:var(--green);">0</div></div>
-      <div class="shot-stat-box"><div class="shot-stat-label">FG%</div><div class="shot-stat-val" id="sc-pct">—</div></div>
-      <div class="shot-stat-box"><div class="shot-stat-label">2PT%</div><div class="shot-stat-val" id="sc-2pt">—</div></div>
-      <div class="shot-stat-box"><div class="shot-stat-label">3PT%</div><div class="shot-stat-val" id="sc-3pt">—</div></div>
-    </div>
-    <div class="shot-legend">
-      <div style="display:flex;align-items:center;gap:4px;"><div class="legend-dot" style="background:#22c55e;"></div><span>Made</span></div>
-      <div style="display:flex;align-items:center;gap:4px;"><div class="legend-dot" style="background:#ef4444;border-radius:2px;"></div><span>Missed</span></div>
-      <div style="display:flex;align-items:center;gap:4px;"><div class="legend-dot" style="background:#f59e0b;"></div><span>Free throw</span></div>
-    </div>
-  </div>
-
-  <!-- Court with shots -->
-  <div class="card" style="padding:10px;">
-    <div class="court-container" id="shot-court-container">
-      <svg id="shot-chart-svg" class="court-svg" viewBox="0 0 470 250" xmlns="http://www.w3.org/2000/svg">
-        <!-- Court background -->
-        <rect width="470" height="250" fill="#F8FAFC" rx="4"/>
-        <!-- Half court line -->
-        <line x1="235" y1="0" x2="235" y2="250" stroke="#CBD5E1" stroke-width="1.5"/>
-        <!-- Court outline (left half = attacking end) -->
-        <rect x="5" y="5" width="460" height="240" fill="none" stroke="#94A3B8" stroke-width="2" rx="3"/>
-        <!-- Paint/Key box -->
-        <rect x="5" y="77" width="116" height="96" fill="rgba(59,130,246,0.08)" stroke="#3B82F6" stroke-width="1.5"/>
-        <!-- Free throw lane inner marks -->
-        <line x1="5" y1="97" x2="15" y2="97" stroke="#94A3B8" stroke-width="1"/>
-        <line x1="5" y1="153" x2="15" y2="153" stroke="#94A3B8" stroke-width="1"/>
-        <!-- Free throw circle -->
-        <ellipse cx="121" cy="125" rx="30" ry="30" fill="none" stroke="#94A3B8" stroke-width="1.5" stroke-dasharray="4,3"/>
-        <!-- Top of free throw circle (solid) -->
-        <path d="M91,125 A30,30 0 0 1 151,125" fill="none" stroke="#94A3B8" stroke-width="1.5"/>
-        <!-- Basket -->
-        <circle cx="22" cy="125" r="5" fill="none" stroke="#F97316" stroke-width="2"/>
-        <circle cx="22" cy="125" r="1.5" fill="#F97316"/>
-        <!-- Backboard -->
-        <line x1="5" y1="113" x2="5" y2="137" stroke="#F97316" stroke-width="3"/>
-        <!-- Restricted area arc -->
-        <path d="M5,107 A18,18 0 0 1 5,143" fill="none" stroke="#94A3B8" stroke-width="1.5"/>
-        <!-- 3-point arc — U12/NBL junior: 6.25m from basket -->
-        <!-- Basket at x=22, court width=250 units represents 15m, so 1m = 16.67 units -->
-        <!-- 6.25m = 104 units radius from basket -->
-        <path d="M5,33 A117,117 0 0 1 5,217" fill="none" stroke="#1E3A5F" stroke-width="2"/>
-        <!-- 3pt corner lines -->
-        <line x1="5" y1="33" x2="119" y2="33" stroke="#1E3A5F" stroke-width="2"/>
-        <line x1="5" y1="217" x2="119" y2="217" stroke="#1E3A5F" stroke-width="2"/>
-        <!-- Centre circle (right half) -->
-        <ellipse cx="235" cy="125" rx="30" ry="30" fill="none" stroke="#CBD5E1" stroke-width="1.5"/>
-        <!-- Zone labels (faint) -->
-        <text x="45" y="122" font-size="7" fill="#94A3B8" text-anchor="middle" font-family="Arial">PAINT</text>
-        <text x="45" y="131" font-size="7" fill="#94A3B8" text-anchor="middle" font-family="Arial">AREA</text>
-        <text x="80" y="20" font-size="7" fill="#94A3B8" text-anchor="middle" font-family="Arial">CORNER 3</text>
-        <text x="80" y="243" font-size="7" fill="#94A3B8" text-anchor="middle" font-family="Arial">CORNER 3</text>
-        <text x="170" y="72" font-size="7" fill="#94A3B8" text-anchor="middle" font-family="Arial">WING 3</text>
-        <text x="170" y="183" font-size="7" fill="#94A3B8" text-anchor="middle" font-family="Arial">WING 3</text>
-        <text x="175" y="128" font-size="7" fill="#94A3B8" text-anchor="middle" font-family="Arial">TOP OF ARC</text>
-        <text x="140" y="128" font-size="7" fill="#94A3B8" text-anchor="middle" font-family="Arial">MID</text>
-        <!-- Shot dots rendered by JS -->
-        <g id="shot-dots"></g>
-      </svg>
-    </div>
-  </div>
-
-  <!-- Zone breakdown table -->
-  <div class="card">
-    <div class="sec-label">By zone</div>
-    <table class="zone-table" id="zone-table">
-      <thead><tr><th>Zone</th><th>FGM</th><th>FGA</th><th>FG%</th></tr></thead>
-      <tbody id="zone-table-body"></tbody>
-    </table>
-  </div>
-</div>
-
-<!-- shot modal injected dynamically by showShotModal() -->
 
 <!-- EDIT MODAL -->
 <div class="modal-overlay" id="edit-modal">
@@ -817,17 +727,8 @@ async function syncGameToCloud(game){
 }
 
 // Push live game state so shot companion can see current on-court players
-let liveStatePushTimer=null;
-async function pushLiveState(){
-  const cg=state.currentGame;if(!cg||cg.ended)return;
-  const gameWithPlayers={...cg,_players:state.players};
-  try{await sbSaveGame(gameWithPlayers);}catch(e){}
-}
-function scheduleLiveStatePush(){
-  if(liveStatePushTimer)clearTimeout(liveStatePushTimer);
-  liveStatePushTimer=setTimeout(pushLiveState,1000);
-}
 
+async 
 async function loadGamesFromCloud(){
   try{
     const cloudGames=await sbLoadGames();
@@ -868,21 +769,37 @@ function showSyncBadge(msg){
 }
 
 function load(){
-  // Load from localStorage
+  // Try loading from current key first, then fall back through old keys
+  const OLD_KEYS=['wildcats_v9','wildcats_v8','wildcats_v7','wildcats_v6','wildcats_v5'];
   try{
     const r=localStorage.getItem(SK);
     if(r){
       const loaded=JSON.parse(r);
       if(loaded._starters){pendingStarters=new Set(loaded._starters);delete loaded._starters;}
       state=loaded;
+    } else {
+      // Try old keys to migrate existing data
+      for(const oldKey of OLD_KEYS){
+        const old=localStorage.getItem(oldKey);
+        if(old){
+          try{
+            const loaded=JSON.parse(old);
+            if(loaded._starters){pendingStarters=new Set(loaded._starters);delete loaded._starters;}
+            state=loaded;
+            console.log('Migrated from',oldKey);
+            break;
+          }catch(e){}
+        }
+      }
     }
   }catch(e){
     console.warn('localStorage load failed, using defaults',e);
     state={players:[],games:[],currentGame:null};
   }
-  // Always ensure players and games exist
+  // ALWAYS ensure players exist — use SQUAD as absolute fallback
   if(!state.players||!Array.isArray(state.players)||state.players.length===0){
     state.players=SQUAD.map(p=>({...p}));
+    save(); // persist the default squad immediately
   }
   if(!state.games||!Array.isArray(state.games))state.games=[];
   // Ensure all players have stats entries if game in progress
@@ -915,7 +832,6 @@ function load(){
   loadGamesFromCloud().then(hadNew=>{
     if(hadNew){renderSeason();showSyncBadge('↓ '+state.games.length+' games loaded from cloud');}
   }).catch(e=>console.warn('Cloud load on startup failed:',e));
-  startCompanionShotPoll();
   // Ensure starter grid always renders after everything settles
   setTimeout(renderStarterGrid, 50);
 }
@@ -964,7 +880,7 @@ function showScreen(name,el){
   if(name==='squad')renderSetup();
   if(name==='timeline'){populateTlSelector();renderTimeline();}
   if(name==='data'){}  // static, nothing to render
-  if(name==='shots'){populateShotFilters();renderShotChart();}
+
   requestWakeLock();
 }
 
@@ -1410,7 +1326,7 @@ function startGame(){
   renderPeriodBar(state.currentGame);
   requestWakeLock();
   // Push to cloud so shot companion can join
-  syncGameToCloud({...state.currentGame,_players:state.players});
+
 }
 
 function fmtDate(d){if(!d)return'';try{const p=d.split('-');return p[2]+'/'+p[1]+'/'+p[0];}catch(e){return d;}}
@@ -1472,7 +1388,6 @@ function endGame(){
   const summary={minutes:{},stats:{}};
   state.players.forEach(p=>{summary.minutes[p.id]=cg.minutes[p.id]||0;summary.stats[p.id]={...cg.stats[p.id]};});
   cg.summary=summary;
-  // shots already stored on cg.shots — carried through in the push below
   const savedGame={...cg};
   state.games.push(savedGame);
   state.games.sort((a,b)=>parseDateStr(b.date)-parseDateStr(a.date));
@@ -1502,7 +1417,6 @@ function togglePlayer(pid){
     addEvent('sub_on',{player:p?p.name:'?'});
   }
   save();renderOnCourtSection();renderActionPanel();renderRosterTable();renderStatus();
-  scheduleLiveStatePush();
 }
 
 function selectPlayer(pid){selectedPid=(selectedPid===pid)?null:pid;renderOnCourtSection();renderActionPanel();}
@@ -1534,12 +1448,7 @@ function logAction(type){
   document.getElementById('last-action').textContent=pname+' — '+labels[type];
   save();renderRosterTable();renderScores();
 
-  // Trigger shot placement modal for all shot types
-  const isShotType = ['1pt','ft_miss','2pt','3pt','fga'].includes(type);
-  if(isShotType){
-    const shotResult = (type==='fga'||type==='ft_miss') ? 'missed' : 'made';
-    showShotModal(selectedPid, pname, shotResult, pts, tlIdx);
-  }
+
 }
 
 function undoAction(){
@@ -1766,6 +1675,13 @@ function addPlayer(){
   document.getElementById('new-num').value='';document.getElementById('new-name').value='';
   save();renderSetup();
 }
+function restoreDefaultSquad(){
+  if(!confirm('Restore the default 10-player squad? Your game data will NOT be deleted.'))return;
+  state.players=SQUAD.map(p=>({...p}));
+  save();renderSetup();renderStarterGrid();
+  alert('Squad restored. You can now select starters on Game Setup.');
+}
+
 function clearAll(){
   if(!confirm('Clear all game data? Squad will be kept.'))return;
   state={players:state.players,games:[],currentGame:null};
@@ -1780,7 +1696,7 @@ function exportCSV(){
   const rows=[];
   // header
   rows.push(['Date','Round','Opposition','Venue','Game Type','Result','Eltham Score','Opp Score',
-    'Player','#','MIN (decimal)','PTS','FTM','FTA','FT%','FGM','FGA','FG%','AST','REB','STL','BLK','TO','FL','Shots','Shots Made','Shot FG%'].join(','));
+    'Player','#','MIN (decimal)','PTS','FTM','FTA','FT%','FGM','FGA','FG%','AST','REB','STL','BLK','TO','FL'].join(','));
   games.forEach(g=>{
     const diff=(g.scoreHome||0)-(g.scoreAway||0);
     const result=diff>0?'W':diff<0?'L':'D';
@@ -1814,11 +1730,7 @@ function exportCSV(){
         s.stl,
         s.blk,
         s.tov,
-        s.foul||0,
-        // shot chart data
-        (()=>{const shots=(g.shots||[]).filter(sh=>sh.pid===p.id&&sh.pts!==1);return shots.length;})(),
-        (()=>{const shots=(g.shots||[]).filter(sh=>sh.pid===p.id&&sh.result==='made'&&sh.pts!==1);return shots.length;})(),
-        (()=>{const att=(g.shots||[]).filter(sh=>sh.pid===p.id&&sh.pts!==1).length;const made=(g.shots||[]).filter(sh=>sh.pid===p.id&&sh.result==='made'&&sh.pts!==1).length;return att>0?Math.round(made/att*100)+'%':'';})()
+        s.foul||0
       ].join(','));
     });
   });
@@ -1832,356 +1744,24 @@ function exportCSV(){
   showSyncBadge('✓ CSV exported — '+games.length+' games, '+sorted.length+' players');
 }
 
-// ── SHOT CHART ──
-let pendingShot = null;      // {pid, pname, type, pts, tlIdx}
-let pendingShotXY = null;    // {x, y} normalised 0-1
-let shotGameFilter = 'all';
-let shotPlayerFilter = 'all';
 
-// Zone classifier — returns zone name from normalised x,y
-// Court SVG: 470x250, basket at x=22,y=125
-// Normalised: x=cx/470, y=cy/250
-function classifyZone(nx, ny){
-  const cx = nx * 470;
-  const cy = ny * 250;
-  const bx = 22, by = 125;
-  const dx = cx - bx, dy = cy - by;
-  const dist = Math.sqrt(dx*dx + dy*dy);
-  // Paint: inside key box x<121, y 77-173
-  if(cx < 121 && cy > 77 && cy < 173) return 'Paint';
-  // Corner 3: x<119, y<33 or y>217
-  if(cx < 119 && cy <= 33) return 'Corner 3 (top)';
-  if(cx < 119 && cy >= 217) return 'Corner 3 (bottom)';
-  // 3-point line: arc radius ~117 from basket
-  if(dist > 117) return 'Top of Arc 3';
-  // Wing 3 approximation
-  if(dist > 100 && (cy < 80 || cy > 170)) return 'Wing 3';
-  // Mid range
-  return 'Mid Range';
-}
 
-// Determine if shot is a 3-pointer based on position
-function is3Pointer(nx, ny){
-  const cx = nx * 470;
-  const cy = ny * 250;
-  const bx = 22, by = 125;
-  const dx = cx - bx, dy = cy - by;
-  const dist = Math.sqrt(dx*dx + dy*dy);
-  // Corner 3
-  if(cx < 119 && (cy <= 33 || cy >= 217)) return true;
-  // Arc 3
-  if(dist >= 117) return true;
-  return false;
-}
 
-// Called after tapping FGM/FGA action buttons — show placement modal
-function showShotModal(pid, pname, type, pts, tlIdx){
-  const cg = state.currentGame;
-  if(!cg || cg.ended) return;
-  pendingShot = {pid, pname, type, pts, tlIdx};
-  pendingShotXY = null;
-  // Remove any existing modal first
-  const existing = document.getElementById('shot-modal');
-  if(existing) existing.remove();
-  // Build modal fresh — no residual event handlers
-  const sm = document.createElement('div');
-  sm.id = 'shot-modal';
-  sm.className = 'shot-modal visible';
-  sm.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.7);z-index:9000;display:flex;align-items:center;justify-content:center;padding:16px;';
-  sm.innerHTML = `
-    <div style="background:var(--surface);border-radius:var(--r);padding:16px;width:100%;max-width:420px;">
-      <div style="font-size:14px;font-weight:600;color:var(--text);margin-bottom:4px;">${pname} — ${type==='made'?'Shot made':'Missed shot'}</div>
-      <div style="font-size:12px;color:var(--muted);margin-bottom:12px;">Tap where the shot was taken from, then confirm</div>
-      <div id="court-tap-area" style="position:relative;width:100%;border-radius:var(--rs);overflow:hidden;border:2px solid var(--accent);cursor:crosshair;">
-        <svg id="shot-place-svg" viewBox="0 0 470 250" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;display:block;">
-          <rect width="470" height="250" fill="#F8FAFC" rx="4"/>
-          <line x1="235" y1="0" x2="235" y2="250" stroke="#CBD5E1" stroke-width="1.5"/>
-          <rect x="5" y="5" width="460" height="240" fill="none" stroke="#94A3B8" stroke-width="2" rx="3"/>
-          <rect x="5" y="77" width="116" height="96" fill="rgba(59,130,246,0.08)" stroke="#3B82F6" stroke-width="1.5"/>
-          <ellipse cx="121" cy="125" rx="30" ry="30" fill="none" stroke="#94A3B8" stroke-width="1.5" stroke-dasharray="4,3"/>
-          <path d="M91,125 A30,30 0 0 1 151,125" fill="none" stroke="#94A3B8" stroke-width="1.5"/>
-          <circle cx="22" cy="125" r="5" fill="none" stroke="#F97316" stroke-width="2"/>
-          <circle cx="22" cy="125" r="1.5" fill="#F97316"/>
-          <line x1="5" y1="113" x2="5" y2="137" stroke="#F97316" stroke-width="3"/>
-          <path d="M5,107 A18,18 0 0 1 5,143" fill="none" stroke="#94A3B8" stroke-width="1.5"/>
-          <path d="M5,33 A117,117 0 0 1 5,217" fill="none" stroke="#1E3A5F" stroke-width="2"/>
-          <line x1="5" y1="33" x2="119" y2="33" stroke="#1E3A5F" stroke-width="2"/>
-          <line x1="5" y1="217" x2="119" y2="217" stroke="#1E3A5F" stroke-width="2"/>
-          <ellipse cx="235" cy="125" rx="30" ry="30" fill="none" stroke="#CBD5E1" stroke-width="1.5"/>
-          <g id="shot-place-dots"></g>
-        </svg>
-        <div id="shot-pending-dot" class="shot-pending-dot" style="display:none;"></div>
-      </div>
-      <div style="display:flex;gap:8px;margin-top:12px;">
-        <button style="flex:1;padding:12px;border-radius:var(--rs);background:var(--accent);color:#fff;border:none;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;cursor:pointer;" id="shot-confirm-btn" onclick="confirmShot()" disabled>Confirm shot</button>
-        <button style="flex:1;padding:12px;border-radius:var(--rs);background:var(--surface2);color:var(--text);border:1px solid var(--border2);font-family:'DM Sans',sans-serif;font-size:14px;cursor:pointer;" onclick="cancelShot()">Skip</button>
-      </div>
-    </div>`;
-  document.body.appendChild(sm);
-  // Bind tap ONLY to the court area
-  const tapArea = document.getElementById('court-tap-area');
-  if(tapArea){
-    tapArea.addEventListener('touchstart', handleCourtTap, {passive:false});
-    tapArea.addEventListener('click', handleCourtTap);
-  }
-}
 
-function handleCourtTap(e){
-  e.preventDefault();
-  const tapArea = document.getElementById('court-tap-area');
-  const rect = tapArea.getBoundingClientRect();
-  const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-  const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-  const nx = (clientX - rect.left) / rect.width;
-  const ny = (clientY - rect.top) / rect.height;
-  // Clamp to [0,1]
-  pendingShotXY = {x: Math.max(0, Math.min(1, nx)), y: Math.max(0, Math.min(1, ny))};
-  // Show dot
-  const dot = document.getElementById('shot-pending-dot');
-  dot.style.display = 'block';
-  dot.style.left = (nx * 100) + '%';
-  dot.style.top = (ny * 100) + '%';
-  document.getElementById('shot-confirm-btn').disabled = false;
-}
 
-function confirmShot(){
-  if(!pendingShot || !pendingShotXY) return;
-  const cg = state.currentGame;
-  if(!cg) return;
-  if(!cg.shots) cg.shots = [];
-  const zone = classifyZone(pendingShotXY.x, pendingShotXY.y);
-  const shot = {
-    id: Date.now(),
-    pid: pendingShot.pid,
-    player: pendingShot.pname,
-    result: pendingShot.type,
-    pts: pendingShot.pts || 0,
-    x: Math.round(pendingShotXY.x * 1000) / 1000,
-    y: Math.round(pendingShotXY.y * 1000) / 1000,
-    zone: zone,
-    quarter: cg.quarter,
-    ts: getTimestamp(cg),
-    scoreHome: cg.scoreHome,
-    scoreAway: cg.scoreAway,
-    gameId: cg.id
-  };
-  cg.shots.push(shot);
-  save();
-  const sm = document.getElementById('shot-modal');
-  if(sm) sm.remove();  // remove from DOM entirely — no residual handlers
-  pendingShot = null; pendingShotXY = null;
-  showSyncBadge('📍 Shot placed — '+zone);
-}
 
-function cancelShot(){
-  const sm=document.getElementById('shot-modal');
-  if(sm) sm.remove();  // remove from DOM entirely
-  pendingShot = null; pendingShotXY = null;
-}
 
-// ── SHOT CHART RENDERING ──
-function showScreen_shots(){
-  populateShotFilters();
-  renderShotChart();
-}
 
-function populateShotFilters(){
-  const cg = state.currentGame;
-  const gameFilter = document.getElementById('sc-game-filter');
-  gameFilter.innerHTML = '<button class="sc-filter-btn'+(shotGameFilter==='all'?' active':'')+'" onclick="setShotGame('all',this)">All Games</button>';
-  // Add current game
-  if(cg && cg.shots && cg.shots.length > 0){
-    const btn = document.createElement('button');
-    btn.className = 'sc-filter-btn' + (shotGameFilter===String(cg.id)?' active':'');
-    btn.textContent = 'Current game';
-    btn.onclick = function(){setShotGame(String(cg.id),this);};
-    gameFilter.appendChild(btn);
-  }
-  // Past games
-  state.games.forEach(g=>{
-    if(!g.shots || g.shots.length===0) return;
-    const btn = document.createElement('button');
-    btn.className = 'sc-filter-btn' + (shotGameFilter===String(g.id)?' active':'');
-    const label = (g.round?'R'+g.round+' ':'')+' vs '+(g.opponent||'?');
-    btn.textContent = label;
-    btn.onclick = function(){setShotGame(String(g.id),this);};
-    gameFilter.appendChild(btn);
-  });
 
-  // Player filter
-  const playerFilter = document.getElementById('sc-player-filter');
-  playerFilter.innerHTML = '<button class="sc-filter-btn'+(shotPlayerFilter==='all'?' active':'')+'" onclick="setShotPlayer('all',this)">All Players</button>';
-  state.players.sort((a,b)=>a.id-b.id).forEach(p=>{
-    const btn = document.createElement('button');
-    btn.className = 'sc-filter-btn' + (shotPlayerFilter===String(p.id)?' active':'');
-    btn.textContent = p.num+' '+p.name;
-    btn.onclick = function(){setShotPlayer(String(p.id),this);};
-    playerFilter.appendChild(btn);
-  });
-}
 
-function setShotGame(val, el){
-  shotGameFilter = val;
-  document.querySelectorAll('#sc-game-filter .sc-filter-btn').forEach(b=>b.classList.remove('active'));
-  if(el) el.classList.add('active');
-  renderShotChart();
-}
 
-function setShotPlayer(val, el){
-  shotPlayerFilter = val;
-  document.querySelectorAll('#sc-player-filter .sc-filter-btn').forEach(b=>b.classList.remove('active'));
-  if(el) el.classList.add('active');
-  renderShotChart();
-}
 
-function getFilteredShots(){
-  const cg = state.currentGame;
-  let allShots = [];
-  // Gather from all sources
-  if(cg && cg.shots) allShots = allShots.concat(cg.shots.map(s=>({...s, _src:'current'})));
-  state.games.forEach(g=>{if(g.shots) allShots = allShots.concat(g.shots.map(s=>({...s, _src:String(g.id)})));});
-  // Game filter
-  if(shotGameFilter !== 'all'){
-    allShots = allShots.filter(s=>{
-      if(shotGameFilter === 'current') return s._src === 'current';
-      return s._src === shotGameFilter || String(s.gameId) === shotGameFilter;
-    });
-  }
-  // Player filter
-  if(shotPlayerFilter !== 'all'){
-    allShots = allShots.filter(s=>String(s.pid) === shotPlayerFilter);
-  }
-  return allShots;
-}
 
-function renderShotChart(){
-  const shots = getFilteredShots();
-  const dotsG = document.getElementById('shot-dots');
-  if(!dotsG) return;
-  dotsG.innerHTML = '';
-
-  const VW = 470, VH = 250;
-  const made = shots.filter(s=>s.result==='made');
-  const missed = shots.filter(s=>s.result==='missed');
-  const ft = shots.filter(s=>s.pts===1);
-  const twos = shots.filter(s=>s.result==='made'&&s.pts===2);
-  const threes = shots.filter(s=>s.result==='made'&&s.pts===3);
-  const twosAttempted = shots.filter(s=>s.pts!==1&&!is3Pointer(s.x,s.y));
-  const threesAttempted = shots.filter(s=>s.pts!==1&&is3Pointer(s.x,s.y));
-
-  // Stats
-  document.getElementById('sc-total').textContent = shots.filter(s=>s.pts!==1).length;
-  document.getElementById('sc-made').textContent = made.filter(s=>s.pts!==1).length;
-  const fgAttempts = shots.filter(s=>s.pts!==1).length;
-  const fgMade = made.filter(s=>s.pts!==1).length;
-  document.getElementById('sc-pct').textContent = fgAttempts>0?Math.round(fgMade/fgAttempts*100)+'%':'—';
-  document.getElementById('sc-2pt').textContent = twosAttempted.length>0?Math.round(twos.length/twosAttempted.length*100)+'%':'—';
-  document.getElementById('sc-3pt').textContent = threesAttempted.length>0?Math.round(threes.length/threesAttempted.length*100)+'%':'—';
-
-  // Draw dots
-  shots.forEach(s=>{
-    const cx = s.x * VW;
-    const cy = s.y * VH;
-    const isFT = s.pts === 1;
-    const isMade = s.result === 'made';
-
-    if(isFT){
-      // FT = small amber circle at FT line
-      const circle = document.createElementNS('http://www.w3.org/2000/svg','circle');
-      circle.setAttribute('cx', cx);
-      circle.setAttribute('cy', cy);
-      circle.setAttribute('r', '5');
-      circle.setAttribute('fill', '#F59E0B');
-      circle.setAttribute('fill-opacity', '0.85');
-      circle.setAttribute('stroke', '#fff');
-      circle.setAttribute('stroke-width', '1');
-      const title = document.createElementNS('http://www.w3.org/2000/svg','title');
-      title.textContent = s.player+' — FT '+s.result+' ('+s.ts+')';
-      circle.appendChild(title);
-      dotsG.appendChild(circle);
-    } else if(isMade){
-      // Made = filled green circle
-      const circle = document.createElementNS('http://www.w3.org/2000/svg','circle');
-      circle.setAttribute('cx', cx);
-      circle.setAttribute('cy', cy);
-      circle.setAttribute('r', '6');
-      circle.setAttribute('fill', '#22C55E');
-      circle.setAttribute('fill-opacity', '0.85');
-      circle.setAttribute('stroke', '#fff');
-      circle.setAttribute('stroke-width', '1.5');
-      const title = document.createElementNS('http://www.w3.org/2000/svg','title');
-      title.textContent = s.player+' — +'+s.pts+' ('+s.zone+') '+s.ts;
-      circle.appendChild(title);
-      dotsG.appendChild(circle);
-    } else {
-      // Missed = red X
-      const g = document.createElementNS('http://www.w3.org/2000/svg','g');
-      const size = 4.5;
-      const l1 = document.createElementNS('http://www.w3.org/2000/svg','line');
-      l1.setAttribute('x1', cx-size); l1.setAttribute('y1', cy-size);
-      l1.setAttribute('x2', cx+size); l1.setAttribute('y2', cy+size);
-      l1.setAttribute('stroke', '#EF4444'); l1.setAttribute('stroke-width', '2');
-      const l2 = document.createElementNS('http://www.w3.org/2000/svg','line');
-      l2.setAttribute('x1', cx+size); l2.setAttribute('y1', cy-size);
-      l2.setAttribute('x2', cx-size); l2.setAttribute('y2', cy+size);
-      l2.setAttribute('stroke', '#EF4444'); l2.setAttribute('stroke-width', '2');
-      const title = document.createElementNS('http://www.w3.org/2000/svg','title');
-      title.textContent = s.player+' — Missed ('+s.zone+') '+s.ts;
-      g.appendChild(l1); g.appendChild(l2); g.appendChild(title);
-      dotsG.appendChild(g);
-    }
-  });
-
-  // Zone table
-  const zones = ['Paint','Mid Range','Corner 3 (top)','Corner 3 (bottom)','Wing 3','Top of Arc 3'];
-  const tbody = document.getElementById('zone-table-body');
-  tbody.innerHTML = zones.map(z=>{
-    const zShots = shots.filter(s=>s.zone===z && s.pts!==1);
-    const zMade = zShots.filter(s=>s.result==='made').length;
-    const zAtt = zShots.length;
-    const zpct = zAtt>0?Math.round(zMade/zAtt*100)+'%':'—';
-    if(zAtt===0) return '';
-    const color = zAtt>0?(parseInt(zpct)>=50?'color:var(--green)':parseInt(zpct)>=33?'color:var(--amber)':'color:var(--red)'):'';
-    return `<tr><td>${z}</td><td>${zMade}</td><td>${zAtt}</td><td style="${color};font-weight:600;">${zpct}</td></tr>`;
-  }).join('');
-  if(!tbody.innerHTML) tbody.innerHTML = '<tr><td colspan="4" style="color:var(--muted);padding:12px 0;text-align:center;">No shot data yet</td></tr>';
-}
 
 // Cloud sync helpers
-// Poll for shots added by shot companion
-let companionPollTimer=null;
-async function pullCompanionShots(){
-  const cg=state.currentGame;
-  if(!cg||cg.ended)return;
-  try{
-    const rows=await sbFetch('games?game_id=eq.'+String(cg.id)+'&select=*');
-    if(!rows||rows.length===0)return;
-    const cloudGame=typeof rows[0].data==='string'?JSON.parse(rows[0].data):rows[0].data;
-    if(!cloudGame||!cloudGame.shots)return;
-    const localIds=new Set((cg.shots||[]).map(s=>String(s.id)));
-    const newShots=cloudGame.shots.filter(s=>!localIds.has(String(s.id))&&s.source==='companion');
-    if(newShots.length>0){
-      if(!cg.shots)cg.shots=[];
-      cg.shots.push(...newShots);
-      save();
-      showSyncBadge('📍 '+newShots.length+' shot'+(newShots.length>1?'s':'')+' received from companion');
-    }
-  }catch(e){}
-}
 
-function startCompanionShotPoll(){
-  if(companionPollTimer)clearInterval(companionPollTimer);
-  // Only poll if there's an active game
-  if(!state.currentGame||state.currentGame.ended) return;
-  companionPollTimer=setInterval(()=>{
-    if(state.currentGame&&!state.currentGame.ended){
-      pullCompanionShots().catch(e=>console.warn('Companion poll error:',e));
-    } else {
-      clearInterval(companionPollTimer);
-      companionPollTimer=null;
-    }
-  },15000);
-}
+
+async 
 
 async function pushAllToCloud(){
   if(state.games.length===0){showSyncBadge('No games to sync');return;}
@@ -2290,14 +1870,6 @@ function openGameDetail(idx){
     <td style="color:var(--amber);">${tFoul}</td>
   </tr>`;
   html+=`</tbody></table></div></div>`;
-  // Shot chart link for this game
-  const gameShotCount=(g.shots||[]).length;
-  if(gameShotCount>0){
-    html+=`<div class="card" style="margin-bottom:10px;">
-      <div class="sec-label" style="margin-bottom:6px;">Shot chart</div>
-      <div style="font-size:13px;color:var(--muted);margin-bottom:8px;">${gameShotCount} shots recorded this game</div>
-      <button class="btn btn-primary" style="width:100%;" onclick="viewGameShots(${idx})">View shot chart →</button>
-    </div>`;
   }
   // timeline
   if(g.timeline&&g.timeline.length>0){
@@ -2347,7 +1919,6 @@ function openGameDetail(idx){
       html+='</div>';
     });
     html+='</div>';
-  }
   content_el.innerHTML=html;
 }
 
@@ -2356,29 +1927,7 @@ function closeGameDetail(){
   setSeasonView(currentSeasonView);
 }
 
-function showCompanionLink(){
-  const url = window.location.origin + window.location.pathname.replace('index.html','') + 'shots.html';
-  const modal = document.createElement('div');
-  modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.6);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;';
-  modal.innerHTML = `<div style="background:var(--surface);border-radius:var(--r);padding:20px;width:100%;max-width:380px;">
-    <div style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:8px;">📍 Shot Companion Link</div>
-    <div style="font-size:12px;color:var(--muted);margin-bottom:12px;">Person 2 opens this URL on their phone to log shot locations:</div>
-    <div style="background:var(--surface2);border-radius:var(--rs);padding:10px 12px;font-size:12px;font-family:'DM Mono',monospace;color:var(--accent);word-break:break-all;margin-bottom:12px;">${url}</div>
-    <div style="display:flex;gap:8px;">
-      <button onclick="navigator.clipboard&&navigator.clipboard.writeText('${url}').then(()=>alert('Link copied!'))" style="flex:1;padding:11px;border-radius:var(--rs);background:var(--accent);color:#fff;border:none;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;cursor:pointer;">Copy link</button>
-      <button onclick="this.closest('div[style*=fixed]').remove()" style="flex:1;padding:11px;border-radius:var(--rs);background:var(--surface2);color:var(--text);border:1px solid var(--border2);font-family:'DM Sans',sans-serif;font-size:13px;cursor:pointer;">Close</button>
-    </div>
-  </div>`;
-  document.body.appendChild(modal);
-  modal.onclick=(e)=>{if(e.target===modal)modal.remove();};
-}
 
-function viewGameShots(idx){
-  const g=state.games[idx];if(!g)return;
-  shotGameFilter=String(g.id);
-  shotPlayerFilter='all';
-  showScreen('shots',document.getElementById('tab-btn-shots'));
-}
 
 function exportTimelineForGame(idx){
   const sel=document.getElementById('tl-game-sel');
