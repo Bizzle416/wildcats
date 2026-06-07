@@ -476,20 +476,14 @@ table.stbl td:first-child{text-align:left;font-weight:500;}
       <div class="sec-label">Season stats</div>
       <div style="font-size:12px;color:var(--muted);margin-bottom:8px;"><span id="game-count">0</span> games played</div>
       <div class="tbl-wrap">
-        <table class="stbl"><thead><tr><th style="min-width:100px;">Player</th><th>PTS</th><th>FTM</th><th>FTA</th><th>FT%</th><th>FGM</th><th>FGA</th><th>FG%</th><th>AST</th><th>REB</th><th>STL</th><th>BLK</th><th>TO</th><th>FL</th></tr></thead><tbody id="season-stats-body"></tbody></table>
+        <table class="stbl"><thead><tr><th style="min-width:100px;">Player</th><th>GP</th><th>GS</th><th>PTS</th><th>FTM</th><th>FTA</th><th>FT%</th><th>FGM</th><th>FGA</th><th>FG%</th><th>AST</th><th>REB</th><th>STL</th><th>BLK</th><th>TO</th><th>FL</th></tr></thead><tbody id="season-stats-body"></tbody></table>
       </div>
     </div>
   </div>
 
   <!-- MINUTES VIEW -->
   <div id="sv-mins" style="display:none;">
-    <div class="card">
-      <div class="sec-label">Season minutes</div>
-      <div style="font-size:12px;color:var(--muted);margin-bottom:10px;">Fair share: <strong style="color:var(--text);" id="fair-share">—</strong> min/game</div>
-      <div class="tbl-wrap">
-        <table class="stbl"><thead><tr><th style="min-width:100px;">Player</th><th>Total</th><th>Avg/g</th><th>vs fair</th></tr></thead><tbody id="season-mins-body"></tbody></table>
-      </div>
-    </div>
+    <div id="season-mins-container"></div>
   </div>
 
   <!-- GAME DETAIL PANEL (shown when a game is tapped) -->
@@ -1361,16 +1355,19 @@ function getPlayerMins(pid,now){
   if(now&&cg.stints[pid])t+=(now-cg.stints[pid])/60000;
   return t;
 }
-function fmtMins(m){return Math.floor(m)+':'+String(Math.floor((m-Math.floor(m))*60)).padStart(2,'0');}
+function fmtMins(m){
+  // Guard against corrupted/impossible values (>200 mins in a single game is clearly wrong)
+  if(!m||isNaN(m)||m<0)return'0:00';
+  // If value looks like it was accidentally stored as seconds, convert it
+  const v=(m>200&&m<10000)?m/60:m;
+  return Math.floor(v)+':'+String(Math.floor((v-Math.floor(v))*60)).padStart(2,'0');
+}
 
 /* ── SEASON ── */
 function renderSeason(){
   const games=state.games;
   const gc=document.getElementById('game-count');
   if(gc)gc.textContent=games.length;
-  const fairShare=(40*5/state.players.length).toFixed(1);
-  const fsEl=document.getElementById('fair-share');
-  if(fsEl)fsEl.textContent=fairShare;
 
   // ── RESULTS VIEW ──
   const resList=document.getElementById('season-results-list');
@@ -1424,34 +1421,97 @@ function renderSeason(){
   }
 
   if(games.length===0){
-    document.getElementById('season-mins-body').innerHTML='<tr><td colspan="4" style="color:var(--muted);padding:12px 0;">No games yet</td></tr>';
-    document.getElementById('season-stats-body').innerHTML='<tr><td colspan="13" style="color:var(--muted);padding:12px 0;">No games yet</td></tr>';
+    document.getElementById('season-mins-container').innerHTML='<div style="font-size:13px;color:var(--muted);padding:16px 0;">No games yet</div>';
+    document.getElementById('season-stats-body').innerHTML='<tr><td colspan="15" style="color:var(--muted);padding:12px 0;">No games yet</td></tr>';
     return;
   }
 
   // ── STATS + MINS ──
-  const totMins={},totStats={};
-  state.players.forEach(p=>{totMins[p.id]=0;totStats[p.id]=emptyStats();});
+  // Group games by format: rep_600, domestic_1200, domestic_1080, etc.
+  const formatGroups={};  // key -> {label, games:[], periodMins, gameType}
+  const totStats={},gp={},gs={};
+  state.players.forEach(p=>{totStats[p.id]=emptyStats();gp[p.id]=0;gs[p.id]=0;});
+
   games.forEach(g=>{
-    if(g.summary){
-      state.players.forEach(p=>{
-        totMins[p.id]+=(g.summary.minutes[p.id]||0);
-        if(g.summary.stats)['fgm','fga','ftm','fta','ast','reb','stl','blk','tov','foul','pts'].forEach(k=>{totStats[p.id][k]+=(g.summary.stats[p.id]?g.summary.stats[p.id][k]||0:0);});
-      });
+    if(!g.summary)return;
+    // Build format key from actual stored periodSecs
+    const pSecs=g.periodSecs||(g.gameType==='domestic'?1200:600);
+    const pMins=Math.round(pSecs/60);
+    const key=(g.gameType==='domestic'?'dom':'rep')+'_'+pSecs;
+    if(!formatGroups[key]){
+      const periods=g.gameType==='domestic'?2:4;
+      const totalGameMins=(pMins*periods);
+      const fairShare=(totalGameMins*5/state.players.length).toFixed(1);
+      const label=g.gameType==='domestic'?'Domestic (2 × '+pMins+' min)':'Rep (4 × '+pMins+' min)';
+      formatGroups[key]={label,games:[],periodMins:pMins,gameType:g.gameType,fairShare,totMins:{}};
+      state.players.forEach(p=>{formatGroups[key].totMins[p.id]=0;});
     }
+    formatGroups[key].games.push(g);
+
+    // Determine starters
+    let startersThisGame=new Set();
+    if(g.timeline){
+      const startEv=g.timeline.find(ev=>ev.type==='start');
+      if(startEv&&startEv.data&&startEv.data.label){
+        const names=(startEv.data.label.replace('Starting 5: ','')).split(', ').map(n=>n.trim());
+        state.players.forEach(p=>{if(names.includes(p.name))startersThisGame.add(p.id);});
+      }
+    }
+    state.players.forEach(p=>{
+      const mins=g.summary.minutes[p.id]||0;
+      formatGroups[key].totMins[p.id]+=mins;
+      if(mins>0)gp[p.id]++;
+      if(startersThisGame.has(p.id))gs[p.id]++;
+      if(g.summary.stats)['fgm','fga','ftm','fta','ast','reb','stl','blk','tov','foul','pts'].forEach(k=>{totStats[p.id][k]+=(g.summary.stats[p.id]?g.summary.stats[p.id][k]||0:0);});
+    });
   });
-  const maxMins=Math.max(...state.players.map(p=>totMins[p.id]),1);
-  const fs=parseFloat(fairShare);
+
   const sorted=[...state.players].sort((a,b)=>a.id-b.id);
-  document.getElementById('season-mins-body').innerHTML=sorted.map(p=>{
-    const total=totMins[p.id],avg=total/games.length;
-    const pct=Math.round(total/maxMins*100);
-    const col=avg<fs*0.6?'#dc2626':avg<fs*0.85?'#d97706':'#16a34a';
-    return`<tr><td>${p.num} ${p.name}</td><td>${fmtMins(total)}</td><td>${fmtMins(avg)}</td><td><div class="bar-bg"><div class="bar-fill" style="width:${pct}%;background:${col};"></div></div></td></tr>`;
-  }).join('');
+
+  // ── RENDER MINS: one card per format group ──
+  const minsContainer=document.getElementById('season-mins-container');
+  minsContainer.innerHTML='';
+  // Sort groups: rep first, then domestic by period length desc
+  const groupKeys=Object.keys(formatGroups).sort((a,b)=>{
+    const ga=formatGroups[a],gb=formatGroups[b];
+    if(ga.gameType!==gb.gameType)return ga.gameType==='rep'?-1:1;
+    return gb.periodMins-ga.periodMins;
+  });
+  groupKeys.forEach(key=>{
+    const grp=formatGroups[key];
+    const gc=grp.games.length;
+    const card=document.createElement('div');
+    card.className='card';card.style.marginBottom='10px';
+    let rows=sorted.map(p=>{
+      const total=grp.totMins[p.id]||0;
+      const avg=gc>0?total/gc:0;
+      const fs=parseFloat(grp.fairShare);
+      const col=avg<fs*0.6?'var(--red)':avg<fs*0.85?'var(--amber)':'var(--text)';
+      return`<tr>
+        <td>${p.num} ${p.name}</td>
+        <td>${fmtMins(total)}</td>
+        <td style="color:${col};font-weight:${avg<fs*0.85?'600':'400'};">${fmtMins(avg)}</td>
+      </tr>`;
+    }).join('');
+    card.innerHTML=`
+      <div class="sec-label">${grp.label}</div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:10px;">
+        ${gc} game${gc!==1?'s':''} · Fair share: <strong style="color:var(--text);">${grp.fairShare}</strong> min/game
+      </div>
+      <div class="tbl-wrap">
+        <table class="stbl">
+          <thead><tr><th style="min-width:100px;">Player</th><th>Total</th><th>Avg/g</th></tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>`;
+    minsContainer.appendChild(card);
+  });
+  if(groupKeys.length===0){
+    minsContainer.innerHTML='<div style="font-size:13px;color:var(--muted);padding:16px 0;">No games yet</div>';
+  }
   document.getElementById('season-stats-body').innerHTML=sorted.map(p=>{
     const s=totStats[p.id];const fg=s.fga>0?Math.round(s.fgm/s.fga*100)+'%':'—';const ft=s.fta>0?Math.round(s.ftm/s.fta*100)+'%':'—';
-    return`<tr><td>${p.num} ${p.name}</td><td>${s.pts||0}</td><td>${s.ftm||0}</td><td>${s.fta||0}</td><td>${ft}</td><td>${s.fgm}</td><td>${s.fga}</td><td>${fg}</td><td>${s.ast}</td><td>${s.reb}</td><td>${s.stl}</td><td>${s.blk}</td><td>${s.tov}</td><td style="color:var(--amber);">${s.foul||0}</td></tr>`;
+    return`<tr><td>${p.num} ${p.name}</td><td>${gp[p.id]}</td><td>${gs[p.id]}</td><td>${s.pts||0}</td><td>${s.ftm||0}</td><td>${s.fta||0}</td><td>${ft}</td><td>${s.fgm}</td><td>${s.fga}</td><td>${fg}</td><td>${s.ast}</td><td>${s.reb}</td><td>${s.stl}</td><td>${s.blk}</td><td>${s.tov}</td><td style="color:var(--amber);">${s.foul||0}</td></tr>`;
   }).join('');
 }
 
@@ -1660,13 +1720,25 @@ function openGameDetail(idx){
   </div>`;
   // player stats table
   html+=`<div class="card" style="padding:10px 0;margin-bottom:10px;"><div class="sec-label" style="padding:0 14px 8px;">Player stats</div><div style="overflow-x:auto;"><table class="rtbl"><thead><tr><th>Player</th><th>MIN</th><th>PTS</th><th>FTM</th><th>FTA</th><th>FT%</th><th>FGM</th><th>FGA</th><th>FG%</th><th>AST</th><th>REB</th><th>STL</th><th>BLK</th><th>TO</th><th>FL</th></tr></thead><tbody>`;
+  let tMins=0,tPts=0,tFtm=0,tFta=0,tFgm=0,tFga=0,tAst=0,tReb=0,tStl=0,tBlk=0,tTov=0,tFoul=0;
   sorted.forEach(p=>{
     const m=g.summary?g.summary.minutes[p.id]||0:0;
     const s=g.summary&&g.summary.stats?g.summary.stats[p.id]||emptyStats():emptyStats();
     const fg=s.fga>0?Math.round(s.fgm/s.fga*100)+'%':'—';
     const ftpctGdp=s.fta>0?Math.round((s.ftm||0)/s.fta*100)+'%':'—';
     html+=`<tr><td><span style="font-size:10px;color:var(--muted);font-family:DM Mono,monospace;">${p.num}</span> ${p.name}</td><td style="font-family:DM Mono,monospace;font-size:11px;">${fmtMins(m)}</td><td>${s.pts||0}</td><td>${s.ftm||0}</td><td>${s.fta||0}</td><td style="color:var(--muted);">${ftpctGdp}</td><td>${s.fgm}</td><td>${s.fga}</td><td style="color:var(--muted);">${fg}</td><td>${s.ast}</td><td>${s.reb}</td><td>${s.stl}</td><td>${s.blk}</td><td style="color:var(--red);">${s.tov}</td><td style="color:var(--amber);">${s.foul||0}</td></tr>`;
+    tMins+=m;tPts+=(s.pts||0);tFtm+=(s.ftm||0);tFta+=(s.fta||0);tFgm+=s.fgm;tFga+=s.fga;tAst+=s.ast;tReb+=s.reb;tStl+=s.stl;tBlk+=s.blk;tTov+=s.tov;tFoul+=(s.foul||0);
   });
+  const tFgPct=tFga>0?Math.round(tFgm/tFga*100)+'%':'—';
+  const tFtPct=tFta>0?Math.round(tFtm/tFta*100)+'%':'—';
+  html+=`<tr style="border-top:2px solid var(--border2);background:var(--surface2);font-weight:700;">
+    <td style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;">Team totals</td>
+    <td style="font-family:DM Mono,monospace;font-size:11px;">${fmtMins(tMins)}</td>
+    <td>${tPts}</td><td>${tFtm}</td><td>${tFta}</td><td style="color:var(--muted);">${tFtPct}</td>
+    <td style="color:#2563eb;">${tFgm}</td><td>${tFga}</td><td style="color:var(--muted);">${tFgPct}</td>
+    <td>${tAst}</td><td>${tReb}</td><td>${tStl}</td><td>${tBlk}</td>
+    <td style="color:var(--red);">${tTov}</td><td style="color:var(--amber);">${tFoul}</td>
+  </tr>`;
   html+=`</tbody></table></div></div>`;
   // timeline
   if(g.timeline&&g.timeline.length>0){
