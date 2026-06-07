@@ -260,8 +260,8 @@ table.stbl td:first-child{text-align:left;font-weight:500;}
 .sv-btn-active{background:var(--accent);border-color:var(--accent);color:#fff;}
 
 /* EDIT MODAL */
-.modal-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:200;display:none;align-items:flex-start;justify-content:center;padding:16px;overflow-y:auto;}
-.modal-overlay.visible{display:flex;}
+.modal-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:200;align-items:flex-start;justify-content:center;padding:16px;overflow-y:auto;display:none;pointer-events:none;}
+.modal-overlay.visible{display:flex;pointer-events:auto;}
 .modal{background:var(--surface);border:1px solid var(--border2);border-radius:var(--r);padding:16px;width:100%;max-width:500px;margin-top:20px;box-shadow:0 8px 32px rgba(0,0,0,0.15);}
 .modal-title{font-size:15px;font-weight:600;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;color:var(--text);}
 .modal-close{font-size:20px;color:var(--muted);cursor:pointer;line-height:1;}
@@ -281,11 +281,7 @@ table.stbl td:first-child{text-align:left;font-weight:500;}
 /* SHOT CHART */
 .court-container{position:relative;width:100%;background:var(--surface);border-radius:var(--r);overflow:hidden;touch-action:none;}
 .court-svg{width:100%;height:auto;display:block;cursor:crosshair;}
-.shot-modal{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.6);z-index:300;display:flex;align-items:center;justify-content:center;padding:16px;}
-.shot-modal-inner{background:var(--surface);border-radius:var(--r);padding:16px;width:100%;max-width:420px;}
-.shot-modal-title{font-size:14px;font-weight:600;color:var(--text);margin-bottom:4px;}
-.shot-modal-sub{font-size:12px;color:var(--muted);margin-bottom:12px;}
-.court-tap-area{position:relative;width:100%;border-radius:var(--rs);overflow:hidden;border:2px solid var(--accent);cursor:crosshair;touch-action:none;}
+/* shot modal styles injected inline when created dynamically */
 .shot-pending-dot{position:absolute;width:14px;height:14px;border-radius:50%;background:var(--accent);border:2px solid #fff;transform:translate(-50%,-50%);pointer-events:none;box-shadow:0 0 8px rgba(59,130,246,0.6);}
 .shot-confirm-row{display:flex;gap:8px;margin-top:12px;}
 .sc-filters{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;}
@@ -394,10 +390,9 @@ table.stbl td:first-child{text-align:left;font-weight:500;}
     </div>
   </div>
   <div class="to-banner" id="to-banner">TIMEOUT — <span id="to-team"></span></div>
-  <!-- Companion link (shown when game is live) -->
-  <div id="companion-bar" style="display:none;background:var(--purple-bg);border:1px solid rgba(124,58,237,0.3);border-radius:var(--rs);padding:8px 12px;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;">
-    <div style="font-size:12px;color:var(--purple);font-weight:500;">🎯 Shot companion active — Person 2 opens:</div>
-    <button onclick="showCompanionLink()" style="font-size:11px;color:var(--accent);background:none;border:none;cursor:pointer;font-family:'DM Sans',sans-serif;font-weight:600;">Share link</button>
+  <!-- Companion link button -->
+  <div id="companion-bar" style="display:none;margin-bottom:6px;">
+    <button onclick="showCompanionLink()" class="btn" style="width:100%;font-size:12px;color:var(--purple);border-color:rgba(124,58,237,0.3);background:var(--purple-bg);">🎯 Share shot companion link with Person 2</button>
   </div>
 
   <!-- S2 + S3: ON COURT (left) + ACTION (right) side by side -->
@@ -658,37 +653,7 @@ table.stbl td:first-child{text-align:left;font-weight:500;}
   </div>
 </div>
 
-<!-- SHOT PLACEMENT MODAL -->
-<div class="shot-modal" id="shot-modal" style="display:none;">
-  <div class="shot-modal-inner">
-    <div class="shot-modal-title" id="shot-modal-title">Place shot on court</div>
-    <div class="shot-modal-sub" id="shot-modal-sub">Tap where the shot was taken from</div>
-    <div class="court-tap-area" id="court-tap-area">
-      <svg id="shot-place-svg" viewBox="0 0 470 250" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;display:block;">
-        <rect width="470" height="250" fill="#F8FAFC" rx="4"/>
-        <line x1="235" y1="0" x2="235" y2="250" stroke="#CBD5E1" stroke-width="1.5"/>
-        <rect x="5" y="5" width="460" height="240" fill="none" stroke="#94A3B8" stroke-width="2" rx="3"/>
-        <rect x="5" y="77" width="116" height="96" fill="rgba(59,130,246,0.08)" stroke="#3B82F6" stroke-width="1.5"/>
-        <ellipse cx="121" cy="125" rx="30" ry="30" fill="none" stroke="#94A3B8" stroke-width="1.5" stroke-dasharray="4,3"/>
-        <path d="M91,125 A30,30 0 0 1 151,125" fill="none" stroke="#94A3B8" stroke-width="1.5"/>
-        <circle cx="22" cy="125" r="5" fill="none" stroke="#F97316" stroke-width="2"/>
-        <circle cx="22" cy="125" r="1.5" fill="#F97316"/>
-        <line x1="5" y1="113" x2="5" y2="137" stroke="#F97316" stroke-width="3"/>
-        <path d="M5,107 A18,18 0 0 1 5,143" fill="none" stroke="#94A3B8" stroke-width="1.5"/>
-        <path d="M5,33 A117,117 0 0 1 5,217" fill="none" stroke="#1E3A5F" stroke-width="2"/>
-        <line x1="5" y1="33" x2="119" y2="33" stroke="#1E3A5F" stroke-width="2"/>
-        <line x1="5" y1="217" x2="119" y2="217" stroke="#1E3A5F" stroke-width="2"/>
-        <ellipse cx="235" cy="125" rx="30" ry="30" fill="none" stroke="#CBD5E1" stroke-width="1.5"/>
-        <g id="shot-place-dots"></g>
-      </svg>
-      <div id="shot-pending-dot" class="shot-pending-dot" style="display:none;"></div>
-    </div>
-    <div class="shot-confirm-row">
-      <button class="btn btn-primary" style="flex:1;" id="shot-confirm-btn" onclick="confirmShot()" disabled>Confirm shot</button>
-      <button class="btn" style="flex:1;" onclick="cancelShot()">Skip / No location</button>
-    </div>
-  </div>
-</div>
+<!-- shot modal injected dynamically by showShotModal() -->
 
 <!-- EDIT MODAL -->
 <div class="modal-overlay" id="edit-modal">
@@ -894,7 +859,7 @@ function showSyncBadge(msg){
   if(!badge){
     badge=document.createElement('div');
     badge.id='sync-badge';
-    badge.style.cssText='position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--surface);border:1px solid var(--border2);border-radius:20px;padding:7px 16px;font-size:13px;font-weight:500;color:var(--text);box-shadow:0 4px 16px rgba(0,0,0,0.15);z-index:999;transition:opacity 0.4s;white-space:nowrap;';
+    badge.style.cssText='position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--surface);border:1px solid var(--border2);border-radius:20px;padding:7px 16px;font-size:13px;font-weight:500;color:var(--text);box-shadow:0 4px 16px rgba(0,0,0,0.15);z-index:999;transition:opacity 0.4s;white-space:nowrap;pointer-events:none;';
     document.body.appendChild(badge);
   }
   badge.textContent=msg;badge.style.opacity='1';
@@ -903,6 +868,7 @@ function showSyncBadge(msg){
 }
 
 function load(){
+  // Load from localStorage
   try{
     const r=localStorage.getItem(SK);
     if(r){
@@ -910,11 +876,32 @@ function load(){
       if(loaded._starters){pendingStarters=new Set(loaded._starters);delete loaded._starters;}
       state=loaded;
     }
+  }catch(e){
+    console.warn('localStorage load failed, using defaults',e);
+    state={players:[],games:[],currentGame:null};
+  }
+  // Always ensure players and games exist
+  if(!state.players||!Array.isArray(state.players)||state.players.length===0){
+    state.players=SQUAD.map(p=>({...p}));
+  }
+  if(!state.games||!Array.isArray(state.games))state.games=[];
+  // Ensure all players have stats entries if game in progress
+  if(state.currentGame){
+    if(!state.currentGame.stats)state.currentGame.stats={};
+    if(!state.currentGame.onCourt)state.currentGame.onCourt=[];
+    if(!state.currentGame.minutes)state.currentGame.minutes={};
+    if(!state.currentGame.stints)state.currentGame.stints={};
+    if(!state.currentGame.timeline)state.currentGame.timeline=[];
+    state.players.forEach(p=>{
+      if(!state.currentGame.stats[p.id])state.currentGame.stats[p.id]=emptyStats();
+    });
+  }
+  // Set default date/time fields
+  try{
+    document.getElementById('g-date').value=new Date().toISOString().split('T')[0];
+    document.getElementById('g-time').value='18:00';
   }catch(e){}
-  if(!state.players||state.players.length===0)state.players=SQUAD.map(p=>({...p}));
-  if(!state.games)state.games=[];
-  document.getElementById('g-date').value=new Date().toISOString().split('T')[0];
-  document.getElementById('g-time').value='18:00';
+  // Render starter grid first — always
   renderStarterGrid();
   // Restore game type from current game if one is in progress
   if(state.currentGame){
@@ -924,12 +911,13 @@ function load(){
   render();
   if(state.currentGame&&state.currentGame.running)startTimer();
   requestWakeLock();
-  // Pull any new games from cloud silently
+  // Pull from cloud silently — wrapped in catch so network errors don't break UI
   loadGamesFromCloud().then(hadNew=>{
     if(hadNew){renderSeason();showSyncBadge('↓ '+state.games.length+' games loaded from cloud');}
-  });
-  // Start periodic pull of companion shots during active game
+  }).catch(e=>console.warn('Cloud load on startup failed:',e));
   startCompanionShotPoll();
+  // Ensure starter grid always renders after everything settles
+  setTimeout(renderStarterGrid, 50);
 }
 
 async function requestWakeLock(){
@@ -971,6 +959,7 @@ function showScreen(name,el){
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
   if(el)el.classList.add('active');
   if(name==='game'){renderPeriodBar(state.currentGame);renderStatus();renderTimer();}
+  if(name==='pregame'){renderStarterGrid();}
   if(name==='season')renderSeason();
   if(name==='squad')renderSetup();
   if(name==='timeline'){populateTlSelector();renderTimeline();}
@@ -1887,18 +1876,54 @@ function is3Pointer(nx, ny){
 
 // Called after tapping FGM/FGA action buttons — show placement modal
 function showShotModal(pid, pname, type, pts, tlIdx){
+  const cg = state.currentGame;
+  if(!cg || cg.ended) return;
   pendingShot = {pid, pname, type, pts, tlIdx};
   pendingShotXY = null;
-  document.getElementById('shot-modal-title').textContent = pname + ' — ' + (type==='made'?'Shot made':'Missed shot');
-  document.getElementById('shot-modal-sub').textContent = 'Tap where the shot was taken from, then confirm';
-  document.getElementById('shot-confirm-btn').disabled = true;
-  document.getElementById('shot-pending-dot').style.display = 'none';
-  document.getElementById('shot-place-dots').innerHTML = '';
-  document.getElementById('shot-modal').style.display = 'flex';
-  // Bind tap on court
+  // Remove any existing modal first
+  const existing = document.getElementById('shot-modal');
+  if(existing) existing.remove();
+  // Build modal fresh — no residual event handlers
+  const sm = document.createElement('div');
+  sm.id = 'shot-modal';
+  sm.className = 'shot-modal visible';
+  sm.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.7);z-index:9000;display:flex;align-items:center;justify-content:center;padding:16px;';
+  sm.innerHTML = `
+    <div style="background:var(--surface);border-radius:var(--r);padding:16px;width:100%;max-width:420px;">
+      <div style="font-size:14px;font-weight:600;color:var(--text);margin-bottom:4px;">${pname} — ${type==='made'?'Shot made':'Missed shot'}</div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:12px;">Tap where the shot was taken from, then confirm</div>
+      <div id="court-tap-area" style="position:relative;width:100%;border-radius:var(--rs);overflow:hidden;border:2px solid var(--accent);cursor:crosshair;">
+        <svg id="shot-place-svg" viewBox="0 0 470 250" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;display:block;">
+          <rect width="470" height="250" fill="#F8FAFC" rx="4"/>
+          <line x1="235" y1="0" x2="235" y2="250" stroke="#CBD5E1" stroke-width="1.5"/>
+          <rect x="5" y="5" width="460" height="240" fill="none" stroke="#94A3B8" stroke-width="2" rx="3"/>
+          <rect x="5" y="77" width="116" height="96" fill="rgba(59,130,246,0.08)" stroke="#3B82F6" stroke-width="1.5"/>
+          <ellipse cx="121" cy="125" rx="30" ry="30" fill="none" stroke="#94A3B8" stroke-width="1.5" stroke-dasharray="4,3"/>
+          <path d="M91,125 A30,30 0 0 1 151,125" fill="none" stroke="#94A3B8" stroke-width="1.5"/>
+          <circle cx="22" cy="125" r="5" fill="none" stroke="#F97316" stroke-width="2"/>
+          <circle cx="22" cy="125" r="1.5" fill="#F97316"/>
+          <line x1="5" y1="113" x2="5" y2="137" stroke="#F97316" stroke-width="3"/>
+          <path d="M5,107 A18,18 0 0 1 5,143" fill="none" stroke="#94A3B8" stroke-width="1.5"/>
+          <path d="M5,33 A117,117 0 0 1 5,217" fill="none" stroke="#1E3A5F" stroke-width="2"/>
+          <line x1="5" y1="33" x2="119" y2="33" stroke="#1E3A5F" stroke-width="2"/>
+          <line x1="5" y1="217" x2="119" y2="217" stroke="#1E3A5F" stroke-width="2"/>
+          <ellipse cx="235" cy="125" rx="30" ry="30" fill="none" stroke="#CBD5E1" stroke-width="1.5"/>
+          <g id="shot-place-dots"></g>
+        </svg>
+        <div id="shot-pending-dot" class="shot-pending-dot" style="display:none;"></div>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:12px;">
+        <button style="flex:1;padding:12px;border-radius:var(--rs);background:var(--accent);color:#fff;border:none;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;cursor:pointer;" id="shot-confirm-btn" onclick="confirmShot()" disabled>Confirm shot</button>
+        <button style="flex:1;padding:12px;border-radius:var(--rs);background:var(--surface2);color:var(--text);border:1px solid var(--border2);font-family:'DM Sans',sans-serif;font-size:14px;cursor:pointer;" onclick="cancelShot()">Skip</button>
+      </div>
+    </div>`;
+  document.body.appendChild(sm);
+  // Bind tap ONLY to the court area
   const tapArea = document.getElementById('court-tap-area');
-  tapArea.ontouchstart = handleCourtTap;
-  tapArea.onclick = handleCourtTap;
+  if(tapArea){
+    tapArea.addEventListener('touchstart', handleCourtTap, {passive:false});
+    tapArea.addEventListener('click', handleCourtTap);
+  }
 }
 
 function handleCourtTap(e){
@@ -1942,13 +1967,15 @@ function confirmShot(){
   };
   cg.shots.push(shot);
   save();
-  document.getElementById('shot-modal').style.display = 'none';
+  const sm = document.getElementById('shot-modal');
+  if(sm) sm.remove();  // remove from DOM entirely — no residual handlers
   pendingShot = null; pendingShotXY = null;
   showSyncBadge('📍 Shot placed — '+zone);
 }
 
 function cancelShot(){
-  document.getElementById('shot-modal').style.display = 'none';
+  const sm=document.getElementById('shot-modal');
+  if(sm) sm.remove();  // remove from DOM entirely
   pendingShot = null; pendingShotXY = null;
 }
 
@@ -2144,10 +2171,16 @@ async function pullCompanionShots(){
 
 function startCompanionShotPoll(){
   if(companionPollTimer)clearInterval(companionPollTimer);
+  // Only poll if there's an active game
+  if(!state.currentGame||state.currentGame.ended) return;
   companionPollTimer=setInterval(()=>{
-    if(state.currentGame&&!state.currentGame.ended) pullCompanionShots();
-    else clearInterval(companionPollTimer);
-  },15000); // every 15 seconds
+    if(state.currentGame&&!state.currentGame.ended){
+      pullCompanionShots().catch(e=>console.warn('Companion poll error:',e));
+    } else {
+      clearInterval(companionPollTimer);
+      companionPollTimer=null;
+    }
+  },15000);
 }
 
 async function pushAllToCloud(){
