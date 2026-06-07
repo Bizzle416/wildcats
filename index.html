@@ -481,9 +481,9 @@ table.stbl td:first-child{text-align:left;font-weight:500;}
 <div id="screen-season" class="screen">
   <!-- season view toggle -->
   <div style="display:flex;gap:6px;margin-bottom:10px;">
-    <button class="btn" id="sv-results-btn" onclick="setSeasonView('results')" style="flex:1;">Results</button>
-    <button class="btn" id="sv-stats-btn" onclick="setSeasonView('stats')" style="flex:1;">Player Stats</button>
-    <button class="btn" id="sv-mins-btn" onclick="setSeasonView('mins')" style="flex:1;">Minutes</button>
+    <button class="btn sv-btn-active" id="sv-results-btn" onclick="setSeasonView('results',this)" style="flex:1;">Results</button>
+    <button class="btn" id="sv-stats-btn" onclick="setSeasonView('stats',this)" style="flex:1;">Player Stats</button>
+    <button class="btn" id="sv-mins-btn" onclick="setSeasonView('mins',this)" style="flex:1;">Minutes</button>
   </div>
 
   <!-- RESULTS VIEW -->
@@ -580,7 +580,7 @@ table.stbl td:first-child{text-align:left;font-weight:500;}
 <script>
 const SK='wildcats_v10';
 const SB_URL='https://pccmmceqvlxjndphpybj.supabase.co';
-const SB_KEY='sb_publishable_1H4EmfPsBaMRkaSOcJHaEA_rVDBVImC';
+const SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBjY21tY2Vxdmx4am5kcGhweWJqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAwNTU5NDcsImV4cCI6MjA5NTYzMTk0N30.tAvIg2hRQkfvZ2Uc8nSWU0NyiNJ4MOJAqMKPx4Bk6kY';
 
 // Supabase helpers
 async function sbFetch(path, options={}){
@@ -830,7 +830,7 @@ function load(){
   requestWakeLock();
   // Pull from cloud silently — wrapped in catch so network errors don't break UI
   loadGamesFromCloud().then(hadNew=>{
-    if(hadNew){renderSeason();showSyncBadge('↓ '+state.games.length+' games loaded from cloud');}
+    if(hadNew){renderSeason();setSeasonView('results');showSyncBadge('↓ '+state.games.length+' games loaded from cloud');}
   }).catch(e=>console.warn('Cloud load on startup failed:',e));
   // Ensure starter grid always renders after everything settles
   setTimeout(renderStarterGrid, 50);
@@ -1075,7 +1075,7 @@ function populateTlSelector(){
   }
   state.games.forEach((g,i)=>{
     const o=document.createElement('option');o.value=i;
-    o.textContent=[g.date,g.time,'vs '+g.opponent].filter(Boolean).join(' ');
+    const rl=g.round?'R'+g.round+' ':'';o.textContent=rl+[g.date,'vs '+g.opponent].filter(Boolean).join(' ');
     sel.appendChild(o);
   });
   if(!state.currentGame&&state.games.length>0)sel.value='0';
@@ -1509,7 +1509,8 @@ function renderSeason(){
   const games=state.games;
   const gc=document.getElementById('game-count');
   if(gc)gc.textContent=games.length;
-  const fairShare=(40*5/state.players.length).toFixed(1);
+  const playerCount=state.players&&state.players.length>0?state.players.length:10;
+  const fairShare=(40*5/playerCount).toFixed(1);
   const fsEl=document.getElementById('fair-share');
   if(fsEl)fsEl.textContent=fairShare;
 
@@ -1571,13 +1572,17 @@ function renderSeason(){
   }
 
   // ── STATS + MINS ──
+  // Ensure players exist before calculating
+  if(!state.players||state.players.length===0){
+    state.players=SQUAD.map(p=>({...p}));
+  }
   const totMins={},totStats={};
   state.players.forEach(p=>{totMins[p.id]=0;totStats[p.id]=emptyStats();});
   games.forEach(g=>{
     if(g.summary){
       state.players.forEach(p=>{
         totMins[p.id]+=(g.summary.minutes[p.id]||0);
-        if(g.summary.stats)['fgm','fga','ftm','fta','ast','reb','stl','blk','tov','foul','pts'].forEach(k=>{totStats[p.id][k]+=(g.summary.stats[p.id]?g.summary.stats[p.id][k]||0:0);});
+        if(g.summary.stats){['fgm','fga','ftm','fta','ast','reb','stl','blk','tov','foul','pts'].forEach(k=>{totStats[p.id][k]+=(g.summary.stats[p.id]?g.summary.stats[p.id][k]||0:0);});}
       });
     }
   });
@@ -1784,7 +1789,10 @@ async function pullFromCloud(){
     cloudGames.forEach(g=>seen.set(String(g.id),g));
     state.games=Array.from(seen.values());
     state.games.sort((a,b)=>parseDateStr(b.date)-parseDateStr(a.date));
-    save();renderSeason();
+    save();
+    // If on season tab, re-render it; otherwise just save
+    renderSeason();
+    setSeasonView('results');
     showSyncBadge('✓ Loaded '+state.games.length+' games from cloud');
   }catch(e){showSyncBadge('⚠ Pull failed');}
 }
@@ -1809,9 +1817,12 @@ function setSeasonView(v){
     const el=document.getElementById('sv-'+n);
     if(el)el.style.display=n===v?'block':'none';
     const btn=document.getElementById('sv-'+n+'-btn');
-    if(btn){btn.className=n===v?'btn sv-btn-active':'btn';}
+    if(btn)btn.className=n===v?'btn sv-btn-active':'btn';
   });
-  document.getElementById('game-detail-panel').style.display='none';
+  const gdp=document.getElementById('game-detail-panel');
+  if(gdp)gdp.style.display='none';
+  // Always re-render when switching views
+  renderSeason();
 }
 
 function openGameDetail(idx){
@@ -1819,6 +1830,9 @@ function openGameDetail(idx){
   const panel=document.getElementById('game-detail-panel');
   const title=document.getElementById('gdp-title');
   const content_el=document.getElementById('gdp-content');
+  if(!panel||!title||!content_el)return;
+  // Ensure players are loaded
+  if(!state.players||state.players.length===0)state.players=SQUAD.map(p=>({...p}));
   // hide views, show panel
   ['results','stats','mins'].forEach(n=>{const el=document.getElementById('sv-'+n);if(el)el.style.display='none';});
   panel.style.display='block';
