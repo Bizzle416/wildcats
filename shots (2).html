@@ -1,0 +1,600 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<title>Wildcats — Shot Logger</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Mono:wght@500&display=swap');
+:root{
+  --bg:#e8edf5;--surface:#fff;--surface2:#f0f4fb;--border:rgba(0,0,0,0.08);
+  --border2:rgba(0,0,0,0.14);--text:#1a2035;--muted:#6b7a99;
+  --accent:#3b82f6;--accent-bg:rgba(59,130,246,0.1);
+  --green:#16a34a;--green-bg:rgba(22,163,74,0.1);
+  --red:#dc2626;--red-bg:rgba(220,38,38,0.1);
+  --amber:#d97706;--r:12px;--rs:8px;
+}
+body.dark{
+  --bg:#0a0e1a;--surface:#111827;--surface2:#1a2235;--border:rgba(255,255,255,0.08);
+  --border2:rgba(255,255,255,0.18);--text:#f0f4ff;--muted:#8892a4;
+  --green:#22c55e;--green-bg:rgba(34,197,94,0.13);
+  --red:#ef4444;--red-bg:rgba(239,68,68,0.13);
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;padding-bottom:32px;}
+
+.header{background:var(--surface);border-bottom:1px solid var(--border);padding:11px 16px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;box-shadow:0 1px 4px rgba(0,0,0,0.06);}
+.header-left{display:flex;flex-direction:column;}
+.header-title{font-size:15px;font-weight:600;}
+.header-sub{font-size:11px;color:var(--muted);margin-top:1px;}
+.shot-counter{font-family:'DM Mono',monospace;font-size:13px;font-weight:600;background:var(--accent-bg);color:var(--accent);border-radius:20px;padding:4px 12px;}
+
+.content{padding:10px 12px;}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:12px 14px;margin-bottom:10px;box-shadow:0 1px 3px rgba(0,0,0,0.04);}
+.sec-label{font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:8px;}
+.btn{padding:10px 12px;border-radius:var(--rs);font-size:13px;font-weight:600;border:1px solid var(--border2);background:var(--surface2);color:var(--text);cursor:pointer;font-family:'DM Sans',sans-serif;text-align:center;-webkit-user-select:none;display:block;width:100%;}
+.btn:active{opacity:0.6;transform:scale(0.97);}
+.btn-primary{background:var(--accent);border-color:var(--accent);color:#fff;}
+.btn-green{background:var(--green-bg);border-color:rgba(22,163,74,0.35);color:var(--green);}
+.btn-red{background:var(--red-bg);border-color:rgba(220,38,38,0.35);color:var(--red);}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+
+/* ── SETUP ── */
+.setup-wrap{max-width:420px;margin:24px auto 0;padding:0 14px;}
+.setup-title{font-size:20px;font-weight:600;margin-bottom:6px;}
+.setup-sub{font-size:14px;color:var(--muted);margin-bottom:20px;line-height:1.5;}
+.field-label{font-size:11px;color:var(--muted);font-weight:500;margin-bottom:4px;}
+select,input[type=text]{width:100%;background:var(--surface2);border:1px solid var(--border2);border-radius:var(--rs);color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;padding:10px 12px;outline:none;-webkit-appearance:none;appearance:none;margin-bottom:12px;}
+select:focus,input:focus{border-color:var(--accent);}
+
+/* ── PERIOD BAR ── */
+.period-bar{display:flex;gap:6px;}
+.period-btn{flex:1;padding:9px 4px;border-radius:var(--rs);font-size:13px;font-weight:600;border:1px solid var(--border2);background:var(--surface2);color:var(--muted);cursor:pointer;text-align:center;-webkit-user-select:none;}
+.period-btn.active{background:var(--accent);border-color:var(--accent);color:#fff;}
+.period-btn:active{transform:scale(0.95);}
+
+/* ── PLAYER GRID ── */
+.player-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;}
+.player-btn{padding:11px 8px;border-radius:var(--rs);border:2px solid var(--border2);background:var(--surface2);cursor:pointer;-webkit-user-select:none;text-align:center;}
+.player-btn:active{transform:scale(0.93);}
+.player-btn.active{background:var(--accent-bg);border-color:var(--accent);}
+.p-num{font-size:10px;color:var(--muted);font-family:'DM Mono',monospace;}
+.player-btn.active .p-num{color:var(--accent);}
+.p-name{font-size:13px;font-weight:600;margin-top:2px;color:var(--text);}
+.player-btn.active .p-name{color:var(--accent);}
+
+/* ── MADE/MISSED ── */
+.shot-type-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.type-btn{padding:18px 8px;border-radius:var(--rs);border:2px solid var(--border2);background:var(--surface2);cursor:pointer;-webkit-user-select:none;text-align:center;font-size:24px;}
+.type-btn:active{transform:scale(0.93);}
+.type-btn .type-label{font-size:12px;font-weight:600;margin-top:5px;}
+.type-btn.made.active{background:var(--green-bg);border-color:var(--green);}
+.type-btn.made.active .type-label{color:var(--green);}
+.type-btn.missed.active{background:var(--red-bg);border-color:var(--red);}
+.type-btn.missed.active .type-label{color:var(--red);}
+
+/* ── COURT ── */
+.court-wrap{position:relative;width:100%;}
+.court-hint{font-size:12px;color:var(--muted);text-align:center;margin-bottom:6px;min-height:18px;}
+#court-svg{width:100%;display:block;border-radius:8px;background:var(--surface2);touch-action:none;}
+#court-svg.ready{cursor:crosshair;}
+
+/* ── CONFIRM BAR ── */
+.confirm-bar{display:none;margin-top:10px;background:var(--accent-bg);border:1px solid rgba(59,130,246,0.3);border-radius:var(--rs);padding:10px 14px;}
+.confirm-bar.show{display:block;}
+.confirm-info{font-size:13px;font-weight:600;color:var(--accent);margin-bottom:8px;}
+.confirm-btns{display:grid;grid-template-columns:1fr 2fr;gap:8px;}
+
+/* ── LOG ── */
+.log-empty{font-size:13px;color:var(--muted);padding:4px 0;}
+.log-row{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);}
+.log-row:last-child{border-bottom:none;}
+.log-icon{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;flex-shrink:0;}
+.log-icon.made{background:var(--green-bg);color:var(--green);}
+.log-icon.missed{background:var(--red-bg);color:var(--red);}
+.log-info{flex:1;}
+.log-name{font-size:13px;font-weight:500;}
+.log-meta{font-size:11px;color:var(--muted);}
+.log-undo{font-size:11px;color:var(--muted);cursor:pointer;padding:3px 8px;border:1px solid var(--border2);border-radius:4px;flex-shrink:0;background:var(--surface2);}
+.log-undo:active{opacity:0.6;}
+
+/* ── EXPORT ── */
+.export-card{background:var(--green-bg);border-color:rgba(22,163,74,0.3);}
+
+/* ── TOAST ── */
+#toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--text);color:var(--surface);border-radius:20px;padding:8px 18px;font-size:13px;font-weight:500;z-index:999;opacity:0;transition:opacity 0.3s;pointer-events:none;white-space:nowrap;}
+#toast.show{opacity:1;}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header">
+  <div class="header-left">
+    <div class="header-title">🏀 Shot Logger</div>
+    <div class="header-sub" id="header-sub">Not connected</div>
+  </div>
+  <div class="shot-counter" id="shot-counter">0 shots</div>
+</div>
+
+<!-- SETUP SCREEN -->
+<div id="setup-screen">
+  <div class="setup-wrap">
+    <div class="setup-title">Set up game</div>
+    <div class="setup-sub">Choose the game format so the period buttons are correct. The squad is built in — just start logging.</div>
+
+    <div class="field-label">Game format</div>
+    <select id="format-sel">
+      <option value="rep4x10">Rep — 4 × 10 min quarters</option>
+      <option value="dom2x20">Domestic — 2 × 20 min halves</option>
+      <option value="dom2x18">Domestic — 2 × 18 min halves</option>
+      <option value="dom2x15">Domestic — 2 × 15 min halves</option>
+    </select>
+
+    <div class="field-label">Game label (optional)</div>
+    <input type="text" id="game-label-input" placeholder="e.g. vs Heidelberg R11"/>
+
+    <button class="btn btn-primary" onclick="startSession()" style="margin-top:4px;">Start logging →</button>
+  </div>
+</div>
+
+<!-- MAIN LOGGER -->
+<div id="logger-screen" style="display:none;">
+  <div class="content">
+
+    <!-- Period -->
+    <div class="card">
+      <div class="sec-label" style="margin-bottom:6px;">Period</div>
+      <div class="period-bar" id="period-bar"></div>
+    </div>
+
+    <!-- Player -->
+    <div class="card">
+      <div class="sec-label">1 — Who shot?</div>
+      <div class="player-grid" id="player-grid"></div>
+    </div>
+
+    <!-- Made / Missed -->
+    <div class="card">
+      <div class="sec-label">2 — Result</div>
+      <div class="shot-type-row">
+        <div class="type-btn made" id="btn-made" onclick="selectType(true)">
+          ●<div class="type-label">Made</div>
+        </div>
+        <div class="type-btn missed" id="btn-missed" onclick="selectType(false)">
+          ✕<div class="type-label">Missed</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Court -->
+    <div class="card">
+      <div class="sec-label">3 — Tap location</div>
+      <div class="court-hint" id="court-hint">Complete steps 1 &amp; 2 first</div>
+      <div class="court-wrap">
+        <svg id="court-svg" viewBox="0 0 300 165" xmlns="http://www.w3.org/2000/svg">
+          <!-- boundary -->
+          <rect x="3" y="3" width="294" height="159" rx="3" fill="none" stroke="var(--border2)" stroke-width="1.5"/>
+          <!-- paint -->
+          <rect x="95" y="3" width="110" height="80" fill="rgba(59,130,246,0.07)" stroke="var(--border2)" stroke-width="1.2"/>
+          <!-- backboard -->
+          <line x1="122" y1="3" x2="178" y2="3" stroke="var(--border2)" stroke-width="3"/>
+          <!-- restricted area arc -->
+          <path d="M 127,3 A 23,23 0 0 1 173,3" fill="none" stroke="var(--border2)" stroke-width="1.2"/>
+          <!-- free throw circle -->
+          <circle cx="150" cy="83" r="30" fill="none" stroke="var(--border2)" stroke-width="1" stroke-dasharray="3,3"/>
+          <!-- 3pt arc -->
+          <path d="M 28,3 A 122,120 0 0 1 272,3" fill="none" stroke="var(--border2)" stroke-width="1.2" stroke-dasharray="3,2"/>
+          <!-- 3pt corner lines -->
+          <line x1="28" y1="3" x2="28" y2="55" stroke="var(--border2)" stroke-width="1.2"/>
+          <line x1="272" y1="3" x2="272" y2="55" stroke="var(--border2)" stroke-width="1.2"/>
+          <!-- half-court line at bottom -->
+          <line x1="3" y1="159" x2="297" y2="159" stroke="var(--border2)" stroke-width="1" stroke-dasharray="4,3"/>
+          <!-- zone labels -->
+          <text x="150" y="36" text-anchor="middle" font-size="9" fill="var(--muted)" opacity="0.55">Paint</text>
+          <text x="16" y="28" text-anchor="middle" font-size="7" fill="var(--muted)" opacity="0.5">3L</text>
+          <text x="284" y="28" text-anchor="middle" font-size="7" fill="var(--muted)" opacity="0.5">3R</text>
+          <text x="58" y="76" text-anchor="middle" font-size="8" fill="var(--muted)" opacity="0.5">Mid-L</text>
+          <text x="242" y="76" text-anchor="middle" font-size="8" fill="var(--muted)" opacity="0.5">Mid-R</text>
+          <text x="150" y="112" text-anchor="middle" font-size="8" fill="var(--muted)" opacity="0.5">Top key</text>
+          <!-- dots layer -->
+          <g id="shot-dots"></g>
+          <!-- pending indicator -->
+          <circle id="pending-circle" cx="-50" cy="-50" r="7" fill="var(--accent)" opacity="0.5" stroke="white" stroke-width="1.5"/>
+        </svg>
+      </div>
+      <!-- confirm bar -->
+      <div class="confirm-bar" id="confirm-bar">
+        <div class="confirm-info" id="confirm-info"></div>
+        <div class="confirm-btns">
+          <button class="btn" style="font-size:12px;padding:9px 8px;" onclick="cancelShot()">Cancel</button>
+          <button class="btn btn-primary" style="font-size:12px;padding:9px 8px;" onclick="confirmShot()">✓ Log shot</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Recent log -->
+    <div class="card">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+        <div class="sec-label" style="margin-bottom:0;">Recent shots</div>
+        <div id="log-stats" style="font-size:11px;color:var(--muted);"></div>
+      </div>
+      <div id="shot-log"><div class="log-empty">No shots yet</div></div>
+    </div>
+
+    <!-- Export -->
+    <div class="card export-card">
+      <div class="sec-label" style="color:var(--green);">Export &amp; merge</div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:10px;line-height:1.55;">
+        After the game: tap Share to send the shot data to the main tracker device, then import it in the <strong>Shot Chart</strong> tab.
+      </div>
+      <button class="btn btn-green" onclick="exportShots()" id="export-btn">⬆ Share shots JSON</button>
+      <div style="margin-top:8px;font-size:11px;color:var(--muted);" id="export-note"></div>
+      <!-- iOS fallback: copy-paste panel, shown if share fails -->
+      <div id="copy-fallback" style="display:none;margin-top:10px;">
+        <div style="font-size:12px;color:var(--muted);margin-bottom:6px;">Share unavailable — copy the text below and paste into a message or email:</div>
+        <textarea id="copy-json" readonly style="width:100%;height:80px;background:var(--surface2);border:1px solid var(--border2);border-radius:var(--rs);color:var(--text);font-family:'DM Mono',monospace;font-size:10px;padding:8px;resize:none;outline:none;-webkit-user-select:all;user-select:all;"></textarea>
+        <button class="btn btn-primary" style="margin-top:6px;" onclick="copyJsonToClipboard()">Copy to clipboard</button>
+      </div>
+    </div>
+
+    <!-- Danger -->
+    <div class="card">
+      <button class="btn btn-red" onclick="clearSession()">Reset — clear all shots</button>
+    </div>
+
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ── Squad (hardcoded, matches main app) ──
+const SQUAD=[
+  {id:4, num:'#4', name:'Elara Jewell'},
+  {id:6, num:'#6', name:'Grace Burslem'},
+  {id:8, num:'#8', name:'Evie Davis'},
+  {id:10,num:'#10',name:'Quinn Cukier'},
+  {id:13,num:'#13',name:'Emilia Wynne'},
+  {id:15,num:'#15',name:'Madeline Hadley'},
+  {id:21,num:'#21',name:'Ellie Spithill'},
+  {id:22,num:'#22',name:'Harper Bolton'},
+  {id:23,num:'#23',name:"Zoe O'Connell"},
+  {id:33,num:'#33',name:'Eva Leverton'}
+];
+
+const FORMAT_PERIODS={
+  'rep4x10':{count:4,label:'Q',name:'Rep 4×10'},
+  'dom2x20':{count:2,label:'H',name:'Dom 2×20'},
+  'dom2x18':{count:2,label:'H',name:'Dom 2×18'},
+  'dom2x15':{count:2,label:'H',name:'Dom 2×15'},
+};
+
+// ── State ──
+let shots=[];          // [{id,player_id,player_name,x,y,made,period,ts}]
+let selectedPlayer=null;  // player object
+let selectedMade=null;    // true/false
+let currentPeriod=1;
+let periodCount=4;
+let periodLabel='Q';
+let gameLabel='';
+let pendingX=null,pendingY=null;
+const SK='wildcats_shots_session';
+
+function load(){
+  try{
+    const d=JSON.parse(localStorage.getItem(SK)||'{}');
+    if(d.shots)shots=d.shots;
+    if(d.gameLabel)gameLabel=d.gameLabel;
+    if(d.periodCount)periodCount=d.periodCount;
+    if(d.periodLabel)periodLabel=d.periodLabel;
+    if(d.currentPeriod)currentPeriod=d.currentPeriod;
+    if(shots.length>0){
+      // restore session
+      document.getElementById('setup-screen').style.display='none';
+      document.getElementById('logger-screen').style.display='block';
+      document.getElementById('header-sub').textContent=gameLabel||'Game in progress';
+      renderPeriodBar();renderPlayerGrid();renderLog();
+    }
+  }catch(e){}
+}
+
+function save(){
+  try{localStorage.setItem(SK,JSON.stringify({shots,gameLabel,periodCount,periodLabel,currentPeriod}));}catch(e){}
+}
+
+// ── Setup ──
+function startSession(){
+  const fmt=document.getElementById('format-sel').value;
+  const f=FORMAT_PERIODS[fmt];
+  periodCount=f.count;periodLabel=f.label;
+  gameLabel=document.getElementById('game-label-input').value.trim()||f.name;
+  currentPeriod=1;shots=[];
+  save();
+  document.getElementById('setup-screen').style.display='none';
+  document.getElementById('logger-screen').style.display='block';
+  document.getElementById('header-sub').textContent=gameLabel;
+  renderPeriodBar();renderPlayerGrid();renderLog();
+  applyTheme();
+}
+
+function applyTheme(){
+  const s=localStorage.getItem('wildcats_theme');
+  if(s==='dark')document.body.classList.add('dark');
+}
+
+// ── Period bar ──
+function renderPeriodBar(){
+  const bar=document.getElementById('period-bar');
+  bar.innerHTML='';
+  for(let i=1;i<=periodCount;i++){
+    const btn=document.createElement('button');
+    btn.className='period-btn'+(i===currentPeriod?' active':'');
+    btn.textContent=periodLabel+i;
+    btn.onclick=(()=>{const n=i;return()=>{currentPeriod=n;renderPeriodBar();save();toast(periodLabel+n+' selected');};})();
+    bar.appendChild(btn);
+  }
+}
+
+// ── Player grid ──
+function renderPlayerGrid(){
+  const grid=document.getElementById('player-grid');
+  grid.innerHTML=SQUAD.map(p=>`
+    <div class="player-btn${selectedPlayer&&selectedPlayer.id===p.id?' active':''}"
+         onclick="selectPlayer(${p.id})">
+      <div class="p-num">${p.num}</div>
+      <div class="p-name">${p.name.split(' ')[0]}</div>
+    </div>`).join('');
+}
+
+function selectPlayer(id){
+  selectedPlayer=SQUAD.find(p=>p.id===id);
+  renderPlayerGrid();
+  updateHint();
+  cancelShot();
+}
+
+// ── Made/missed ──
+function selectType(made){
+  selectedMade=made;
+  document.getElementById('btn-made').classList.toggle('active',made===true);
+  document.getElementById('btn-missed').classList.toggle('active',made===false);
+  updateHint();
+  cancelShot();
+}
+
+function updateHint(){
+  const hint=document.getElementById('court-hint');
+  const svg=document.getElementById('court-svg');
+  if(!selectedPlayer&&selectedMade===null){
+    hint.textContent='Complete steps 1 & 2 first';
+    svg.classList.remove('ready');
+  } else if(!selectedPlayer){
+    hint.textContent='Now select a player ↑';
+    svg.classList.remove('ready');
+  } else if(selectedMade===null){
+    hint.textContent='Now select made or missed ↑';
+    svg.classList.remove('ready');
+  } else {
+    const typeStr=selectedMade?'● Made':'✕ Missed';
+    hint.textContent=typeStr+' · '+selectedPlayer.name+' · tap the court';
+    svg.classList.add('ready');
+  }
+}
+
+// ── Court tap ──
+const svg=document.getElementById('court-svg');
+
+function handleTap(clientX,clientY){
+  if(!selectedPlayer||selectedMade===null){
+    toast('Select player + result first');return;
+  }
+  const rect=svg.getBoundingClientRect();
+  // Map to viewBox 300×165
+  pendingX=Math.round(((clientX-rect.left)/rect.width)*300*10)/10;
+  pendingY=Math.round(((clientY-rect.top)/rect.height)*165*10)/10;
+
+  // Move pending circle
+  const pc=document.getElementById('pending-circle');
+  pc.setAttribute('cx',pendingX);pc.setAttribute('cy',pendingY);
+  pc.setAttribute('fill',selectedMade?'var(--green)':'var(--red)');
+
+  // Show confirm
+  const bar=document.getElementById('confirm-bar');
+  const info=document.getElementById('confirm-info');
+  const typeStr=selectedMade?'● Made':'✕ Missed';
+  info.textContent=typeStr+' — '+selectedPlayer.name+' — '+periodLabel+currentPeriod;
+  bar.classList.add('show');
+}
+
+svg.addEventListener('click',e=>{if(!e.touches)handleTap(e.clientX,e.clientY);});
+svg.addEventListener('touchstart',e=>{
+  e.preventDefault();
+  const t=e.touches[0];
+  handleTap(t.clientX,t.clientY);
+},{passive:false});
+
+function cancelShot(){
+  pendingX=null;pendingY=null;
+  const pc=document.getElementById('pending-circle');
+  pc.setAttribute('cx','-50');pc.setAttribute('cy','-50');
+  document.getElementById('confirm-bar').classList.remove('show');
+}
+
+function confirmShot(){
+  if(pendingX===null||!selectedPlayer||selectedMade===null)return;
+  const shot={
+    id:Date.now()+'_'+Math.random().toString(36).slice(2,7),
+    game_id:'shots_'+Date.now(),  // will be matched on import
+    player_id:selectedPlayer.id,
+    player_name:selectedPlayer.name,
+    player_num:selectedPlayer.num,
+    x:pendingX,y:pendingY,
+    made:selectedMade,
+    period:currentPeriod,
+    period_label:periodLabel+currentPeriod,
+    ts:new Date().toISOString()
+  };
+  shots.unshift(shot);
+  save();
+  addDotToChart(shot);
+  renderLog();
+  cancelShot();
+  toast((selectedMade?'● Made':'✕ Missed')+' — '+selectedPlayer.name);
+}
+
+function addDotToChart(shot){
+  const g=document.getElementById('shot-dots');
+  const grp=document.createElementNS('http://www.w3.org/2000/svg','g');
+  if(shot.made){
+    const c=document.createElementNS('http://www.w3.org/2000/svg','circle');
+    c.setAttribute('cx',shot.x);c.setAttribute('cy',shot.y);c.setAttribute('r','5');
+    c.setAttribute('fill','var(--green)');c.setAttribute('opacity','0.85');
+    c.setAttribute('stroke','white');c.setAttribute('stroke-width','1');
+    grp.appendChild(c);
+  } else {
+    const s=4;
+    [['M'+(shot.x-s)+','+(shot.y-s)+'L'+(shot.x+s)+','+(shot.y+s),
+      'M'+(shot.x+s)+','+(shot.y-s)+'L'+(shot.x-s)+','+(shot.y+s)]].flat().forEach(d=>{
+      const p=document.createElementNS('http://www.w3.org/2000/svg','path');
+      p.setAttribute('d',d);p.setAttribute('stroke','var(--red)');
+      p.setAttribute('stroke-width','2.5');p.setAttribute('stroke-linecap','round');
+      p.setAttribute('opacity','0.85');grp.appendChild(p);
+    });
+  }
+  const title=document.createElementNS('http://www.w3.org/2000/svg','title');
+  title.textContent=shot.player_name+' '+shot.period_label;
+  grp.appendChild(title);
+  g.appendChild(grp);
+}
+
+function redrawAllDots(){
+  document.getElementById('shot-dots').innerHTML='';
+  [...shots].reverse().forEach(s=>addDotToChart(s));
+}
+
+// ── Log ──
+function renderLog(){
+  const el=document.getElementById('shot-log');
+  const stats=document.getElementById('log-stats');
+  const counter=document.getElementById('shot-counter');
+  const made=shots.filter(s=>s.made).length;
+  const pct=shots.length?Math.round(made/shots.length*100)+'%':'—';
+  counter.textContent=shots.length+' shot'+(shots.length!==1?'s':'');
+  if(stats)stats.textContent=made+' made · '+pct;
+  if(shots.length===0){el.innerHTML='<div class="log-empty">No shots yet</div>';return;}
+  el.innerHTML=shots.slice(0,25).map(s=>`
+    <div class="log-row">
+      <div class="log-icon ${s.made?'made':'missed'}">${s.made?'●':'✕'}</div>
+      <div class="log-info">
+        <div class="log-name">${s.player_num} ${s.player_name}</div>
+        <div class="log-meta">${s.period_label} · ${s.made?'Made':'Missed'}</div>
+      </div>
+      <div class="log-undo" onclick="undoShot('${s.id}')">Undo</div>
+    </div>`).join('');
+}
+
+function undoShot(id){
+  shots=shots.filter(s=>s.id!==id);
+  save();redrawAllDots();renderLog();toast('Shot removed');
+}
+
+// ── Export ──
+async function exportShots(){
+  if(shots.length===0){toast('No shots to export');return;}
+  const exportData={
+    version:1,
+    gameLabel,
+    exportedAt:new Date().toISOString(),
+    periodLabel,
+    periodCount,
+    shots:[...shots].reverse()
+  };
+  const json=JSON.stringify(exportData,null,2);
+  const fname='wildcats_shots_'+(gameLabel||'game').replace(/\s+/g,'_').replace(/[^a-z0-9_-]/gi,'')+'_'+new Date().toISOString().split('T')[0]+'.json';
+
+  // Try Web Share API with file (iOS 15+ Safari)
+  if(navigator.canShare){
+    try{
+      const blob=new Blob([json],{type:'application/json'});
+      const file=new File([blob],fname,{type:'application/json'});
+      if(navigator.canShare({files:[file]})){
+        await navigator.share({files:[file],title:'Wildcats shot data',text:gameLabel});
+        document.getElementById('export-note').textContent='✓ Shared '+shots.length+' shots';
+        toast('✓ Shared successfully');
+        return;
+      }
+    }catch(err){
+      // User cancelled share — don't fall through to fallback
+      if(err.name==='AbortError'){toast('Share cancelled');return;}
+    }
+  }
+
+  // Try Web Share API text-only (older iOS)
+  if(navigator.share){
+    try{
+      await navigator.share({title:'Wildcats shots — '+gameLabel,text:json});
+      document.getElementById('export-note').textContent='✓ Shared '+shots.length+' shots';
+      toast('✓ Shared');
+      return;
+    }catch(err){
+      if(err.name==='AbortError'){toast('Share cancelled');return;}
+    }
+  }
+
+  // Last resort: show copy-paste fallback panel
+  const fallback=document.getElementById('copy-fallback');
+  const ta=document.getElementById('copy-json');
+  if(fallback&&ta){
+    ta.value=json;
+    fallback.style.display='block';
+    ta.focus();ta.select();
+    document.getElementById('export-note').textContent=shots.length+' shots ready to copy';
+    toast('Copy the text and send it manually');
+  }
+}
+
+function copyJsonToClipboard(){
+  const ta=document.getElementById('copy-json');
+  if(!ta)return;
+  ta.select();
+  if(navigator.clipboard){
+    navigator.clipboard.writeText(ta.value).then(()=>toast('✓ Copied to clipboard')).catch(()=>{
+      document.execCommand('copy');toast('✓ Copied');
+    });
+  } else {
+    document.execCommand('copy');
+    toast('✓ Copied to clipboard');
+  }
+}
+
+function clearSession(){
+  if(!confirm('Clear all shots and start over?'))return;
+  shots=[];pendingX=null;pendingY=null;selectedPlayer=null;selectedMade=null;
+  save();
+  document.getElementById('shot-dots').innerHTML='';
+  cancelShot();
+  renderLog();
+  // Back to setup
+  document.getElementById('logger-screen').style.display='none';
+  document.getElementById('setup-screen').style.display='block';
+  document.getElementById('header-sub').textContent='Not connected';
+  document.getElementById('shot-counter').textContent='0 shots';
+}
+
+// ── Toast ──
+let toastTimer;
+function toast(msg){
+  const el=document.getElementById('toast');
+  el.textContent=msg;el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer=setTimeout(()=>el.classList.remove('show'),2200);
+}
+
+applyTheme();
+load();
+</script>
+</body>
+</html>
