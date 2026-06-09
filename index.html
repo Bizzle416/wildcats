@@ -1052,7 +1052,7 @@ function load(){
     const r=localStorage.getItem(SK);
     if(r){
       const loaded=JSON.parse(r);
-      if(loaded._starters){pendingStarters=new Set(loaded._starters);delete loaded._starters;}
+      if(loaded._starters){pendingStarters=new Set(loaded._starters.map(Number));delete loaded._starters;}
       state=loaded;
     }
   }catch(e){}
@@ -1102,7 +1102,7 @@ function importData(e){
     try{
       const d=JSON.parse(ev.target.result);if(!d.players)throw new Error();
       if(!confirm('Replace all current data?'))return;
-      if(d._starters){pendingStarters=new Set(d._starters);delete d._starters;}
+      if(d._starters){pendingStarters=new Set(d._starters.map(Number));delete d._starters;}
       state=d;save();render();renderStarterGrid();alert('Restored.');
     }catch(err){alert('Invalid backup file.');}
   };
@@ -1129,12 +1129,13 @@ function renderStarterGrid(){
   const sorted=[...state.players].sort((a,b)=>a.id-b.id);
   grid.innerHTML='';
   sorted.forEach(p=>{
-    const sel=pendingStarters.has(p.id);
+    const pid=Number(p.id);
+    const sel=pendingStarters.has(pid);
     const div=document.createElement('div');
     div.className='starter-item'+(sel?' selected':'');
     div.innerHTML=`<div class="starter-dot">${sel?'✓':''}</div>
       <div><div class="starter-num">${p.num}</div><div class="starter-name">${p.name}</div></div>`;
-    div.onclick=()=>toggleStarter(p.id);
+    div.onclick=()=>toggleStarter(pid);
     grid.appendChild(div);
   });
   const el=document.getElementById('starter-count');
@@ -1142,6 +1143,7 @@ function renderStarterGrid(){
 }
 
 function toggleStarter(pid){
+  pid=Number(pid);
   if(pendingStarters.has(pid)){pendingStarters.delete(pid);}
   else{if(pendingStarters.size>=5){alert('5 starters already selected. Tap one to deselect first.');return;}pendingStarters.add(pid);}
   save();renderStarterGrid();
