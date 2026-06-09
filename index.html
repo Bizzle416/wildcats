@@ -297,6 +297,7 @@ table.stbl td:first-child{text-align:left;font-weight:500;}
   <button class="tab" id="tab-btn-game" onclick="showScreen('game',this)">Game</button>
   <button class="tab" id="tab-btn-timeline" onclick="showScreen('timeline',this)">Timeline</button>
   <button class="tab" id="tab-btn-season" onclick="showScreen('season',this)">Season</button>
+  <button class="tab" id="tab-btn-shots" onclick="showScreen('shots',this)">Shot Chart</button>
   <button class="tab" id="tab-btn-squad" onclick="showScreen('squad',this)">Squad</button>
   <button class="tab" id="tab-btn-data" onclick="showScreen('data',this)">Data</button>
 </div>
@@ -505,6 +506,71 @@ table.stbl td:first-child{text-align:left;font-weight:500;}
   </div>
 </div>
 
+<!-- ═══ SHOT CHART ═══ -->
+<div id="screen-shots" class="screen">
+  <div class="card">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+      <div class="sec-label" style="margin-bottom:0;">Shot Chart</div>
+    </div>
+    <div class="field" style="margin-bottom:8px;">
+      <select id="sc-game-sel" onchange="renderShotChart()">
+        <option value="all">All games</option>
+      </select>
+    </div>
+    <div id="sc-player-pills" style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:10px;"></div>
+    <div style="display:flex;gap:6px;margin-bottom:4px;">
+      <button class="btn sv-btn-active" id="sc-filter-all" onclick="setShotFilter('all')" style="flex:1;font-size:12px;">All</button>
+      <button class="btn" id="sc-filter-made" onclick="setShotFilter('made')" style="flex:1;font-size:12px;">✓ Made</button>
+      <button class="btn" id="sc-filter-missed" onclick="setShotFilter('missed')" style="flex:1;font-size:12px;">✕ Missed</button>
+    </div>
+  </div>
+  <div class="card" style="padding:10px;">
+    <div id="sc-stats-row" style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap;"></div>
+    <div style="width:100%;max-width:500px;margin:0 auto;">
+      <svg id="shot-chart-svg" viewBox="0 0 300 165" style="width:100%;display:block;border-radius:8px;background:var(--surface2);" xmlns="http://www.w3.org/2000/svg">
+        <rect x="3" y="3" width="294" height="159" rx="3" fill="none" stroke="var(--border2)" stroke-width="1.5"/>
+        <rect x="95" y="3" width="110" height="80" fill="rgba(59,130,246,0.06)" stroke="var(--border2)" stroke-width="1.2"/>
+        <line x1="122" y1="3" x2="178" y2="3" stroke="var(--border2)" stroke-width="3"/>
+        <path d="M 127,3 A 23,23 0 0 1 173,3" fill="none" stroke="var(--border2)" stroke-width="1.2"/>
+        <circle cx="150" cy="83" r="30" fill="none" stroke="var(--border2)" stroke-width="1" stroke-dasharray="3,3"/>
+        <path d="M 28,3 A 122,120 0 0 1 272,3" fill="none" stroke="var(--border2)" stroke-width="1.2" stroke-dasharray="3,2"/>
+        <line x1="28" y1="3" x2="28" y2="55" stroke="var(--border2)" stroke-width="1.2"/>
+        <line x1="272" y1="3" x2="272" y2="55" stroke="var(--border2)" stroke-width="1.2"/>
+        <line x1="3" y1="159" x2="297" y2="159" stroke="var(--border2)" stroke-width="1" stroke-dasharray="4,3"/>
+        <text x="150" y="36" text-anchor="middle" font-size="9" fill="var(--muted)" opacity="0.5">Paint</text>
+        <text x="16" y="28" text-anchor="middle" font-size="7" fill="var(--muted)" opacity="0.5">3L</text>
+        <text x="284" y="28" text-anchor="middle" font-size="7" fill="var(--muted)" opacity="0.5">3R</text>
+        <text x="58" y="76" text-anchor="middle" font-size="8" fill="var(--muted)" opacity="0.5">Mid-L</text>
+        <text x="242" y="76" text-anchor="middle" font-size="8" fill="var(--muted)" opacity="0.5">Mid-R</text>
+        <text x="150" y="112" text-anchor="middle" font-size="8" fill="var(--muted)" opacity="0.5">Top key</text>
+        <g id="shot-dots"></g>
+      </svg>
+    </div>
+    <div style="display:flex;gap:16px;justify-content:center;margin-top:8px;">
+      <span style="font-size:11px;color:var(--muted);display:flex;align-items:center;gap:4px;"><span style="color:var(--green);font-size:12px;">●</span> Made</span>
+      <span style="font-size:11px;color:var(--muted);display:flex;align-items:center;gap:4px;"><span style="color:var(--red);font-weight:700;">✕</span> Missed</span>
+    </div>
+  </div>
+  <div class="card" id="sc-zone-card" style="display:none;">
+    <div class="sec-label">Zone breakdown</div>
+    <div class="tbl-wrap">
+      <table class="stbl">
+        <thead><tr><th style="text-align:left;">Zone</th><th>FGM</th><th>FGA</th><th>FG%</th></tr></thead>
+        <tbody id="sc-zone-body"></tbody>
+      </table>
+    </div>
+  </div>
+  <div class="card" style="background:var(--accent-bg);border-color:rgba(59,130,246,0.25);">
+    <div style="font-size:12px;color:var(--accent);font-weight:600;margin-bottom:4px;">📱 Import from Shot Logger</div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:10px;">After the game, share from <strong>shots.html</strong> and import here to merge shot locations.</div>
+    <button class="btn btn-primary" style="margin-bottom:8px;" onclick="document.getElementById('import-shots-file').click()">⬆ Import shots JSON file</button>
+    <input type="file" id="import-shots-file" accept=".json" style="display:none;" onchange="importShotsFile(event)"/>
+    <div style="font-size:11px;color:var(--muted);margin-bottom:6px;">Or paste JSON text if share produced a text copy:</div>
+    <textarea id="paste-shots-json" placeholder="Paste JSON here..." style="width:100%;height:60px;background:var(--surface2);border:1px solid var(--border2);border-radius:var(--rs);color:var(--text);font-family:'DM Mono',monospace;font-size:11px;padding:8px;resize:none;outline:none;"></textarea>
+    <button class="btn" style="margin-top:6px;font-size:12px;" onclick="importShotsFromPaste()">Import pasted JSON</button>
+  </div>
+</div>
+
 <!-- ═══ SQUAD ═══ -->
 <div id="screen-squad" class="screen">
   <div class="card"><div class="sec-label">Squad</div><div id="player-list-setup"></div>
@@ -599,7 +665,220 @@ async function sbLoadGames(){
 async function sbDeleteGame(gameId){
   return await sbFetch('games?game_id=eq.'+String(gameId),{method:'DELETE'});
 }
-const Q_SECS_REP=600;   // 10 min
+
+/* ── SHOT CHART (offline, import-based) ── */
+let shotCache={};       // { gameId: [shot,...] }
+let scSelectedPlayer='all';
+let scShotFilter='all';
+
+function importShotsFile(e){
+  const file=e.target.files[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=ev=>{
+    try{
+      const data=JSON.parse(ev.target.result);
+      const shots=Array.isArray(data)?data:(data.shots||[]);
+      if(!shots.length){showSyncBadge('⚠ No shots found in file');return;}
+      let imported=0;
+      shots.forEach(s=>{
+        const gid=String(s.game_id||s.gameId||'unknown');
+        if(!shotCache[gid])shotCache[gid]=[];
+        if(!shotCache[gid].find(x=>x.id===s.id)){shotCache[gid].push(s);imported++;}
+      });
+      // Persist into matching game objects
+      shots.forEach(s=>{
+        const gid=String(s.game_id||s.gameId||'');
+        const g=state.games.find(g=>String(g.id)===gid);
+        if(g){if(!g.shots)g.shots=[];if(!g.shots.find(x=>x.id===s.id))g.shots.push(s);}
+      });
+      save();
+      showSyncBadge('✓ '+imported+' shots imported');
+      populateScGameSel();renderShotChart();
+    }catch(err){showSyncBadge('⚠ Invalid shots file');}
+  };
+  reader.readAsText(file);
+  e.target.value='';
+}
+
+function importShotsFromPaste(){
+  const ta=document.getElementById('paste-shots-json');
+  if(!ta||!ta.value.trim()){showSyncBadge('Nothing to import');return;}
+  try{
+    const data=JSON.parse(ta.value.trim());
+    const shots=Array.isArray(data)?data:(data.shots||[]);
+    if(!shots.length){showSyncBadge('⚠ No shots found');return;}
+    let imported=0;
+    shots.forEach(s=>{
+      const gid=String(s.game_id||s.gameId||'unknown');
+      if(!shotCache[gid])shotCache[gid]=[];
+      if(!shotCache[gid].find(x=>x.id===s.id)){shotCache[gid].push(s);imported++;}
+    });
+    shots.forEach(s=>{
+      const gid=String(s.game_id||s.gameId||'');
+      const g=state.games.find(g=>String(g.id)===gid);
+      if(g){if(!g.shots)g.shots=[];if(!g.shots.find(x=>x.id===s.id))g.shots.push(s);}
+    });
+    save();
+    ta.value='';
+    showSyncBadge('✓ '+imported+' shots imported');
+    populateScGameSel();renderShotChart();
+  }catch(e){showSyncBadge('⚠ Invalid JSON — check the pasted text');}
+}
+
+function setShotFilter(f){
+  scShotFilter=f;
+  ['all','made','missed'].forEach(n=>{
+    const b=document.getElementById('sc-filter-'+n);
+    if(b){b.className=n===f?'btn sv-btn-active':'btn';b.style.fontSize='12px';}
+  });
+  renderShotChart();
+}
+
+function populateScGameSel(){
+  const sel=document.getElementById('sc-game-sel');if(!sel)return;
+  const cur=sel.value;
+  sel.innerHTML='<option value="all">All games</option>';
+  if(state.currentGame){
+    const o=document.createElement('option');o.value=String(state.currentGame.id);
+    o.textContent='Current — vs '+(state.currentGame.opponent||'?');
+    sel.appendChild(o);
+  }
+  state.games.forEach(g=>{
+    const shots=getShotsForGame(String(g.id));
+    const tag=shots.length?' ('+shots.length+')':'';
+    const o=document.createElement('option');o.value=String(g.id);
+    o.textContent=(g.date||'')+(g.round?' R'+g.round:'')+' vs '+(g.opponent||'?')+tag;
+    sel.appendChild(o);
+  });
+  if(cur)sel.value=cur;
+}
+
+function getShotsForGame(gameId){
+  if(shotCache[gameId]&&shotCache[gameId].length)return shotCache[gameId];
+  if(gameId==='all')return[];
+  const g=state.games.find(g=>String(g.id)===gameId);
+  return(g&&g.shots)||[];
+}
+
+function renderShotChart(){
+  populateScGameSel();
+  const gameId=document.getElementById('sc-game-sel')?.value||'all';
+  let shots=[];
+  if(gameId==='all'){
+    const seen=new Set();
+    [...Object.values(shotCache).flat(),...state.games.flatMap(g=>g.shots||[])
+    ].forEach(s=>{if(!seen.has(s.id)){seen.add(s.id);shots.push(s);}});
+  } else {
+    shots=getShotsForGame(gameId);
+  }
+  // Player pills
+  const pillsEl=document.getElementById('sc-player-pills');
+  if(pillsEl){
+    const pids=[...new Set(shots.map(s=>String(s.player_id)))];
+    const players=state.players.filter(p=>pids.includes(String(p.id)));
+    const mkStyle=a=>a?'background:var(--accent);color:#fff;border-color:var(--accent);border:1px solid var(--accent);':'';
+    pillsEl.innerHTML='<button class="bench-pill" onclick="scSelectPlayer(\'all\')" style="'+mkStyle(scSelectedPlayer==='all')+' font-size:11px;padding:5px 10px;">All</button>';
+    players.sort((a,b)=>a.id-b.id).forEach(p=>{
+      const a=String(scSelectedPlayer)===String(p.id);
+      pillsEl.innerHTML+='<button class="bench-pill" onclick="scSelectPlayer(\''+p.id+'\')" style="'+mkStyle(a)+' font-size:11px;padding:5px 10px;">'+p.num+'</button>';
+    });
+  }
+  // Filter
+  let filtered=shots;
+  if(scSelectedPlayer!=='all')filtered=filtered.filter(s=>String(s.player_id)===String(scSelectedPlayer));
+  if(scShotFilter==='made')filtered=filtered.filter(s=>s.made);
+  if(scShotFilter==='missed')filtered=filtered.filter(s=>!s.made);
+  // Stats bar
+  const made=filtered.filter(s=>s.made).length;
+  const total=filtered.length;
+  const pct=total>0?Math.round(made/total*100)+'%':'—';
+  const statsEl=document.getElementById('sc-stats-row');
+  if(statsEl)statsEl.innerHTML=`
+    <div style="background:var(--green-bg);border-radius:6px;padding:5px 10px;font-size:12px;"><strong style="color:var(--green);">${made}</strong> <span style="color:var(--muted);">made</span></div>
+    <div style="background:var(--red-bg);border-radius:6px;padding:5px 10px;font-size:12px;"><strong style="color:var(--red);">${total-made}</strong> <span style="color:var(--muted);">missed</span></div>
+    <div style="background:var(--accent-bg);border-radius:6px;padding:5px 10px;font-size:12px;"><strong style="color:var(--accent);">${pct}</strong> <span style="color:var(--muted);">FG%</span></div>
+    <div style="background:var(--surface2);border-radius:6px;padding:5px 10px;font-size:12px;"><strong style="color:var(--text);">${total}</strong> <span style="color:var(--muted);">attempts</span></div>`;
+  // Dots
+  const dotsEl=document.getElementById('shot-dots');
+  if(!dotsEl)return;
+  dotsEl.innerHTML='';
+  filtered.forEach(s=>{
+    const x=parseFloat(s.x),y=parseFloat(s.y);
+    if(isNaN(x)||isNaN(y))return;
+    const grp=document.createElementNS('http://www.w3.org/2000/svg','g');
+    if(s.made){
+      const c=document.createElementNS('http://www.w3.org/2000/svg','circle');
+      c.setAttribute('cx',x);c.setAttribute('cy',y);c.setAttribute('r','5');
+      c.setAttribute('fill','var(--green)');c.setAttribute('opacity','0.85');
+      c.setAttribute('stroke','white');c.setAttribute('stroke-width','1');
+      grp.appendChild(c);
+    } else {
+      const sz=4;
+      [['M'+(x-sz)+','+(y-sz)+'L'+(x+sz)+','+(y+sz)],
+       ['M'+(x+sz)+','+(y-sz)+'L'+(x-sz)+','+(y+sz)]].forEach(d=>{
+        const p=document.createElementNS('http://www.w3.org/2000/svg','path');
+        p.setAttribute('d',d);p.setAttribute('stroke','var(--red)');
+        p.setAttribute('stroke-width','2.5');p.setAttribute('stroke-linecap','round');
+        p.setAttribute('opacity','0.85');grp.appendChild(p);
+      });
+    }
+    const title=document.createElementNS('http://www.w3.org/2000/svg','title');
+    title.textContent=(s.player_name||'?')+' — '+(s.made?'Made':'Missed')+(s.period?' Q'+s.period:'');
+    grp.appendChild(title);
+    dotsEl.appendChild(grp);
+  });
+  renderZoneBreakdown(filtered);
+}
+
+function scSelectPlayer(pid){scSelectedPlayer=pid;renderShotChart();}
+
+const SC_ZONES=[
+  {id:'paint',   label:'Paint',            x1:95, y1:3,  x2:205,y2:83},
+  {id:'corner3l',label:'Corner 3 (Left)',  x1:3,  y1:3,  x2:28, y2:55},
+  {id:'corner3r',label:'Corner 3 (Right)', x1:272,y1:3,  x2:297,y2:55},
+  {id:'midl',    label:'Mid-range (Left)', x1:3,  y1:55, x2:95, y2:130},
+  {id:'midr',    label:'Mid-range (Right)',x1:205,y1:55, x2:297,y2:130},
+  {id:'topkey',  label:'Top of key / 3pt', x1:95, y1:83, x2:205,y2:130},
+  {id:'other',   label:'Backcourt',        x1:3,  y1:130,x2:297,y2:162},
+];
+
+function getZone(x,y){
+  for(const z of SC_ZONES){if(x>=z.x1&&x<=z.x2&&y>=z.y1&&y<=z.y2)return z.id;}
+  return'other';
+}
+
+function renderZoneBreakdown(shots){
+  const card=document.getElementById('sc-zone-card');
+  const tbody=document.getElementById('sc-zone-body');
+  if(!card||!tbody)return;
+  const withLoc=shots.filter(s=>!isNaN(parseFloat(s.x)));
+  if(!withLoc.length){card.style.display='none';return;}
+  card.style.display='block';
+  const zd={};SC_ZONES.forEach(z=>zd[z.id]={made:0,total:0,label:z.label});
+  withLoc.forEach(s=>{
+    const zid=getZone(parseFloat(s.x),parseFloat(s.y));
+    if(!zd[zid])zd[zid]={made:0,total:0,label:zid};
+    zd[zid].total++;if(s.made)zd[zid].made++;
+  });
+  tbody.innerHTML=SC_ZONES.map(z=>{
+    const d=zd[z.id];if(!d||!d.total)return'';
+    const pct=Math.round(d.made/d.total*100);
+    const col=pct>=50?'var(--green)':pct>=33?'var(--amber)':'var(--red)';
+    return`<tr><td style="font-size:12px;">${d.label}</td><td>${d.made}</td><td>${d.total}</td><td style="color:${col};font-weight:600;">${pct}%</td></tr>`;
+  }).filter(Boolean).join('');
+}
+
+function loadShotsFromGames(){
+  state.games.forEach(g=>{
+    if(g.shots&&g.shots.length){
+      const gid=String(g.id);
+      if(!shotCache[gid])shotCache[gid]=[];
+      g.shots.forEach(s=>{if(!shotCache[gid].find(x=>x.id===s.id))shotCache[gid].push(s);});
+    }
+  });
+}
+
+   // 10 min
 const Q_SECS_DOM_DEFAULT=1200; // 20 min
 let currentGameType='rep';  // 'rep' or 'domestic'
 
@@ -754,6 +1033,7 @@ function load(){
   loadGamesFromCloud().then(hadNew=>{
     if(hadNew){renderSeason();showSyncBadge('↓ '+state.games.length+' games loaded from cloud');}
   });
+  loadShotsFromGames();
 }
 
 async function requestWakeLock(){
@@ -798,6 +1078,7 @@ function showScreen(name,el){
   if(name==='season')renderSeason();
   if(name==='squad')renderSetup();
   if(name==='timeline'){populateTlSelector();renderTimeline();}
+  if(name==='shots'){populateScGameSel();renderShotChart();}
   if(name==='data'){}  // static, nothing to render
   requestWakeLock();
 }
