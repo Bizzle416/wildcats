@@ -704,7 +704,7 @@ function scRenderPeriodBar(allShots){
 
 function scSetPeriod(p){scSelectedPeriod=p;renderShotChart();}
 
-
+function importShotsFile(e){
   const file=e.target.files[0];if(!file)return;
   const reader=new FileReader();
   reader.onload=ev=>{
