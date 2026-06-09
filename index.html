@@ -2420,6 +2420,126 @@ function openGameReport(idx){
   // Rating methodology note
   const methodNote='Rating (1–10): Pts/40 ×1.0 · STL/40 ×1.5 · BLK/40 ×1.2 · REB/40 ×0.8 · AST/40 ×1.0 − TOV/40 ×1.5 − F/40 ×1.0 + plus/minus ×0.15, scaled to squad range';
 
+  // ── SHOT CHARTS per period ──
+  const gameShots=(g.shots&&g.shots.length)?g.shots:(shotCache[String(g.id)]||[]);
+
+  const REPORT_ZONES=[
+    {id:'paint',   label:'Paint',            x1:88, y1:3,  x2:212,y2:95},
+    {id:'corner3l',label:'Corner 3L',        x1:3,  y1:3,  x2:28, y2:62},
+    {id:'corner3r',label:'Corner 3R',        x1:272,y1:3,  x2:297,y2:62},
+    {id:'midl',    label:'Mid-range L',      x1:3,  y1:62, x2:88, y2:130},
+    {id:'midr',    label:'Mid-range R',      x1:212,y1:62, x2:297,y2:130},
+    {id:'topkey',  label:'Top of key / 3pt', x1:88, y1:95, x2:212,y2:130},
+    {id:'other',   label:'Backcourt',        x1:3,  y1:130,x2:297,y2:162},
+  ];
+
+  function getReportZone(x,y){
+    for(const z of REPORT_ZONES){if(x>=z.x1&&x<=z.x2&&y>=z.y1&&y<=z.y2)return z.id;}
+    return'other';
+  }
+
+  function buildCourtSvg(shots){
+    let dots='';
+    shots.forEach(s=>{
+      const x=parseFloat(s.x),y=parseFloat(s.y);
+      if(isNaN(x)||isNaN(y))return;
+      if(s.made){
+        dots+=`<circle cx="${x}" cy="${y}" r="4" fill="#16a34a" opacity="0.85" stroke="white" stroke-width="1"/>`;
+      } else {
+        const sz=3.5;
+        dots+=`<path d="M${x-sz},${y-sz}L${x+sz},${y+sz}" stroke="#dc2626" stroke-width="2" stroke-linecap="round" opacity="0.9"/>`;
+        dots+=`<path d="M${x+sz},${y-sz}L${x-sz},${y+sz}" stroke="#dc2626" stroke-width="2" stroke-linecap="round" opacity="0.9"/>`;
+      }
+    });
+    return `<svg viewBox="0 0 300 165" xmlns="http://www.w3.org/2000/svg" style="width:100%;display:block;border-radius:6px;">
+      <rect x="0" y="0" width="300" height="165" fill="#dbeafe"/>
+      <rect x="3" y="3" width="294" height="159" rx="2" fill="#eff6ff" stroke="#93c5fd" stroke-width="1.5"/>
+      <rect x="88" y="3" width="124" height="92" fill="#bfdbfe" stroke="#60a5fa" stroke-width="1.2"/>
+      <line x1="120" y1="5" x2="180" y2="5" stroke="#1d4ed8" stroke-width="4"/>
+      <circle cx="150" cy="16" r="5" fill="none" stroke="#1d4ed8" stroke-width="2"/>
+      <line x1="88" y1="95" x2="212" y2="95" stroke="#60a5fa" stroke-width="1.2"/>
+      <path d="M 118,95 A 32,32 0 0 1 182,95" fill="none" stroke="#60a5fa" stroke-width="1.2"/>
+      <path d="M 118,95 A 32,32 0 0 0 182,95" fill="none" stroke="#60a5fa" stroke-width="1.2" stroke-dasharray="3,2"/>
+      <rect x="84" y="25" width="4" height="12" fill="#60a5fa"/>
+      <rect x="212" y="25" width="4" height="12" fill="#60a5fa"/>
+      <rect x="84" y="68" width="4" height="12" fill="#60a5fa"/>
+      <rect x="212" y="68" width="4" height="12" fill="#60a5fa"/>
+      <line x1="88" y1="91" x2="80" y2="91" stroke="#60a5fa" stroke-width="2.5"/>
+      <line x1="212" y1="91" x2="220" y2="91" stroke="#60a5fa" stroke-width="2.5"/>
+      <line x1="28" y1="3" x2="28" y2="62" stroke="#60a5fa" stroke-width="1.2"/>
+      <line x1="272" y1="3" x2="272" y2="62" stroke="#60a5fa" stroke-width="1.2"/>
+      <path d="M 28,62 A 130,130 0 0 0 272,62" fill="none" stroke="#60a5fa" stroke-width="1.2"/>
+      <line x1="3" y1="159" x2="297" y2="159" stroke="#93c5fd" stroke-width="1" stroke-dasharray="4,3"/>
+      <g>${dots}</g>
+    </svg>`;
+  }
+
+  function buildZoneTable(shots){
+    if(!shots.length)return'<p style="font-size:11px;color:#aaa;font-style:italic;">No shots recorded</p>';
+    const zd={};REPORT_ZONES.forEach(z=>zd[z.id]={made:0,total:0,label:z.label});
+    shots.forEach(s=>{
+      const zid=getReportZone(parseFloat(s.x),parseFloat(s.y));
+      if(!zd[zid])return;zd[zid].total++;if(s.made)zd[zid].made++;
+    });
+    const rows=REPORT_ZONES.map(z=>{
+      const d=zd[z.id];if(!d||!d.total)return'';
+      const pct=Math.round(d.made/d.total*100);
+      const col=pct>=50?'#1a6b4a':pct>=33?'#b45309':'#991b1b';
+      return`<tr><td style="padding:4px 6px;font-size:11px;">${d.label}</td>
+        <td style="text-align:center;padding:4px 6px;font-size:11px;">${d.made}/${d.total}</td>
+        <td style="text-align:center;padding:4px 6px;font-size:11px;font-weight:700;color:${col};">${pct}%</td></tr>`;
+    }).filter(Boolean).join('');
+    const total=shots.length;const totalMade=shots.filter(s=>s.made).length;
+    const totalPct=Math.round(totalMade/total*100);
+    return`<table style="width:100%;border-collapse:collapse;font-size:11px;">
+      <thead><tr style="border-bottom:1px solid #ddd;">
+        <th style="text-align:left;padding:4px 6px;font-size:10px;color:#888;font-weight:600;">Zone</th>
+        <th style="text-align:center;padding:4px 6px;font-size:10px;color:#888;font-weight:600;">FGM/FGA</th>
+        <th style="text-align:center;padding:4px 6px;font-size:10px;color:#888;font-weight:600;">FG%</th>
+      </tr></thead>
+      <tbody>${rows}</tbody>
+      <tfoot><tr style="border-top:2px solid #ddd;background:#f5f5f7;">
+        <td style="padding:4px 6px;font-size:11px;font-weight:700;">Total</td>
+        <td style="text-align:center;padding:4px 6px;font-size:11px;font-weight:700;">${totalMade}/${total}</td>
+        <td style="text-align:center;padding:4px 6px;font-size:11px;font-weight:700;color:${totalPct>=50?'#1a6b4a':totalPct>=33?'#b45309':'#991b1b'};">${totalPct}%</td>
+      </tr></tfoot>
+    </table>`;
+  }
+
+  let shotChartHtml='';
+  if(gameShots.length>0){
+    const periodKeys=isDom?[1,2]:[1,2,3,4];
+    const periodCharts=periodKeys.map(p=>{
+      const pShots=gameShots.filter(s=>s.period===p||s.period===String(p));
+      const lbl=periodLabel+p;
+      const made=pShots.filter(s=>s.made).length;
+      const pct=pShots.length?Math.round(made/pShots.length*100)+'%':'—';
+      return`<div style="margin-bottom:20px;">
+        <div style="font-size:12px;font-weight:700;color:#3b82f6;margin-bottom:8px;padding-bottom:4px;border-bottom:2px solid #3b82f6;">
+          ${lbl} — ${made}/${pShots.length} (${pct})
+        </div>
+        <div style="display:grid;grid-template-columns:1.4fr 1fr;gap:12px;align-items:start;">
+          <div>${buildCourtSvg(pShots)}</div>
+          <div>${buildZoneTable(pShots)}</div>
+        </div>
+      </div>`;
+    }).join('');
+
+    // Also build full game chart
+    const allMade=gameShots.filter(s=>s.made).length;
+    const allPct=gameShots.length?Math.round(allMade/gameShots.length*100)+'%':'—';
+    shotChartHtml=`<h2>Shot Chart — ${allMade}/${gameShots.length} FG (${allPct})</h2>
+      <div style="margin-bottom:20px;">
+        <div style="font-size:12px;font-weight:700;color:#555;margin-bottom:8px;">Full game</div>
+        <div style="display:grid;grid-template-columns:1.4fr 1fr;gap:12px;align-items:start;">
+          <div>${buildCourtSvg(gameShots)}</div>
+          <div>${buildZoneTable(gameShots)}</div>
+        </div>
+      </div>
+      <div style="font-size:12px;font-weight:600;color:#555;margin-bottom:12px;margin-top:4px;">By ${isDom?'half':'quarter'}</div>
+      ${periodCharts}`;
+  }
+
   const html=`<!DOCTYPE html><html><head><meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Wildcats — ${roundLabel} vs ${opp} — ${g.date||''}</title>
@@ -2479,6 +2599,8 @@ tfoot td{background:#f5f5f7;font-size:11px;border-top:2px solid #dde;border-bott
 </table>
 </div>
 <div class="note">${methodNote}</div>
+
+${shotChartHtml}
 
 ${tlHtml?`<h2>Game Timeline</h2>${tlHtml}`:''}
 
