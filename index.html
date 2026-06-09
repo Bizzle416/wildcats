@@ -576,7 +576,13 @@ table.stbl td:first-child{text-align:left;font-weight:500;}
   <!-- Import -->
   <div class="card" style="background:var(--accent-bg);border-color:rgba(59,130,246,0.25);">
     <div style="font-size:12px;color:var(--accent);font-weight:600;margin-bottom:4px;">📋 Import from Shot Logger</div>
-    <div style="font-size:12px;color:var(--muted);margin-bottom:8px;">Paste the copied shot data from <strong>shots.html</strong> and tap Import.</div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:8px;">Paste the copied shot data from <strong>shots.html</strong>, select the matching game, then tap Import.</div>
+    <div style="margin-bottom:8px;">
+      <div style="font-size:11px;color:var(--muted);margin-bottom:4px;">Attach shots to game:</div>
+      <select id="import-game-sel" style="width:100%;background:var(--surface);border:1px solid var(--border2);border-radius:var(--rs);color:var(--text);font-family:'DM Sans',sans-serif;font-size:13px;padding:9px 12px;outline:none;-webkit-appearance:none;">
+        <option value="">— Select game —</option>
+      </select>
+    </div>
     <textarea id="paste-shots-json" placeholder="Paste shot data here..." style="width:100%;height:80px;background:var(--surface2);border:1px solid var(--border2);border-radius:var(--rs);color:var(--text);font-family:'DM Mono',monospace;font-size:11px;padding:8px;resize:none;outline:none;"></textarea>
     <button class="btn btn-primary" style="margin-top:8px;" onclick="importShotsFromPaste()">⬆ Import shots</button>
     <input type="file" id="import-shots-file" accept=".json" style="display:none;" onchange="importShotsFile(event)"/>
@@ -733,28 +739,56 @@ function importShotsFile(e){
   e.target.value='';
 }
 
+function populateImportGameSel(){
+  const sel=document.getElementById('import-game-sel');if(!sel)return;
+  const cur=sel.value;
+  sel.innerHTML='<option value="">— Select game —</option>';
+  if(state.currentGame){
+    const o=document.createElement('option');o.value=String(state.currentGame.id);
+    o.textContent='Current — vs '+(state.currentGame.opponent||'?')+' ('+( state.currentGame.date||'today')+')';
+    sel.appendChild(o);
+  }
+  state.games.forEach(g=>{
+    const o=document.createElement('option');o.value=String(g.id);
+    o.textContent=(g.date||'')+(g.round?' R'+g.round:'')+' vs '+(g.opponent||'?');
+    sel.appendChild(o);
+  });
+  if(cur)sel.value=cur;
+}
+
 function importShotsFromPaste(){
   const ta=document.getElementById('paste-shots-json');
   if(!ta||!ta.value.trim()){showSyncBadge('Nothing to import');return;}
+  const sel=document.getElementById('import-game-sel');
+  const targetGameId=sel?sel.value:'';
+  if(!targetGameId){showSyncBadge('⚠ Select a game first');return;}
   try{
     const data=JSON.parse(ta.value.trim());
     const shots=Array.isArray(data)?data:(data.shots||[]);
     if(!shots.length){showSyncBadge('⚠ No shots found');return;}
     let imported=0;
     shots.forEach(s=>{
-      const gid=String(s.game_id||s.gameId||'unknown');
+      // Stamp with the correct game_id
+      const shot={...s,game_id:targetGameId};
+      const gid=targetGameId;
       if(!shotCache[gid])shotCache[gid]=[];
-      if(!shotCache[gid].find(x=>x.id===s.id)){shotCache[gid].push(s);imported++;}
-    });
-    shots.forEach(s=>{
-      const gid=String(s.game_id||s.gameId||'');
+      if(!shotCache[gid].find(x=>x.id===shot.id)){shotCache[gid].push(shot);imported++;}
+      // Persist into the matching game object
       const g=state.games.find(g=>String(g.id)===gid);
-      if(g){if(!g.shots)g.shots=[];if(!g.shots.find(x=>x.id===s.id))g.shots.push(s);}
+      if(g){if(!g.shots)g.shots=[];if(!g.shots.find(x=>x.id===shot.id))g.shots.push(shot);}
+      // Also handle current game
+      if(state.currentGame&&String(state.currentGame.id)===gid){
+        if(!state.currentGame.shots)state.currentGame.shots=[];
+        if(!state.currentGame.shots.find(x=>x.id===shot.id))state.currentGame.shots.push(shot);
+      }
     });
     save();
     ta.value='';
-    showSyncBadge('✓ '+imported+' shots imported');
+    showSyncBadge('✓ '+imported+' shots imported → '+sel.options[sel.selectedIndex].text);
     populateScGameSel();renderShotChart();
+    // Auto-select the game in the shot chart
+    const scSel=document.getElementById('sc-game-sel');
+    if(scSel){scSel.value=targetGameId;renderShotChart();}
   }catch(e){showSyncBadge('⚠ Invalid JSON — check the pasted text');}
 }
 
@@ -1118,7 +1152,7 @@ function showScreen(name,el){
   if(name==='season')renderSeason();
   if(name==='squad')renderSetup();
   if(name==='timeline'){populateTlSelector();renderTimeline();}
-  if(name==='shots'){populateScGameSel();renderShotChart();}
+  if(name==='shots'){populateScGameSel();populateImportGameSel();renderShotChart();}
   if(name==='data'){}  // static, nothing to render
   requestWakeLock();
 }
