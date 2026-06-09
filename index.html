@@ -508,49 +508,62 @@ table.stbl td:first-child{text-align:left;font-weight:500;}
 
 <!-- ═══ SHOT CHART ═══ -->
 <div id="screen-shots" class="screen">
+  <!-- Filters card -->
   <div class="card">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
-      <div class="sec-label" style="margin-bottom:0;">Shot Chart</div>
-    </div>
+    <div class="sec-label" style="margin-bottom:6px;">Shot Chart</div>
+    <!-- Game selector -->
     <div class="field" style="margin-bottom:8px;">
-      <select id="sc-game-sel" onchange="renderShotChart()">
+      <select id="sc-game-sel" onchange="scResetPeriod();renderShotChart()">
         <option value="all">All games</option>
       </select>
     </div>
-    <div id="sc-player-pills" style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:10px;"></div>
-    <div style="display:flex;gap:6px;margin-bottom:4px;">
+    <!-- Period filter (dynamically populated) -->
+    <div id="sc-period-bar" style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:8px;"></div>
+    <!-- Player pills -->
+    <div id="sc-player-pills" style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:8px;"></div>
+    <!-- Made/missed -->
+    <div style="display:flex;gap:6px;">
       <button class="btn sv-btn-active" id="sc-filter-all" onclick="setShotFilter('all')" style="flex:1;font-size:12px;">All</button>
       <button class="btn" id="sc-filter-made" onclick="setShotFilter('made')" style="flex:1;font-size:12px;">✓ Made</button>
       <button class="btn" id="sc-filter-missed" onclick="setShotFilter('missed')" style="flex:1;font-size:12px;">✕ Missed</button>
     </div>
   </div>
+  <!-- Court -->
   <div class="card" style="padding:10px;">
     <div id="sc-stats-row" style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap;"></div>
     <div style="width:100%;max-width:500px;margin:0 auto;">
-      <svg id="shot-chart-svg" viewBox="0 0 300 165" style="width:100%;display:block;border-radius:8px;background:var(--surface2);" xmlns="http://www.w3.org/2000/svg">
-        <rect x="3" y="3" width="294" height="159" rx="3" fill="none" stroke="var(--border2)" stroke-width="1.5"/>
-        <rect x="95" y="3" width="110" height="80" fill="rgba(59,130,246,0.06)" stroke="var(--border2)" stroke-width="1.2"/>
-        <line x1="122" y1="3" x2="178" y2="3" stroke="var(--border2)" stroke-width="3"/>
-        <path d="M 127,3 A 23,23 0 0 1 173,3" fill="none" stroke="var(--border2)" stroke-width="1.2"/>
-        <circle cx="150" cy="83" r="30" fill="none" stroke="var(--border2)" stroke-width="1" stroke-dasharray="3,3"/>
-        <path d="M 28,3 A 122,120 0 0 1 272,3" fill="none" stroke="var(--border2)" stroke-width="1.2" stroke-dasharray="3,2"/>
-        <line x1="28" y1="3" x2="28" y2="55" stroke="var(--border2)" stroke-width="1.2"/>
-        <line x1="272" y1="3" x2="272" y2="55" stroke="var(--border2)" stroke-width="1.2"/>
-        <line x1="3" y1="159" x2="297" y2="159" stroke="var(--border2)" stroke-width="1" stroke-dasharray="4,3"/>
-        <text x="150" y="36" text-anchor="middle" font-size="9" fill="var(--muted)" opacity="0.5">Paint</text>
-        <text x="16" y="28" text-anchor="middle" font-size="7" fill="var(--muted)" opacity="0.5">3L</text>
-        <text x="284" y="28" text-anchor="middle" font-size="7" fill="var(--muted)" opacity="0.5">3R</text>
-        <text x="58" y="76" text-anchor="middle" font-size="8" fill="var(--muted)" opacity="0.5">Mid-L</text>
-        <text x="242" y="76" text-anchor="middle" font-size="8" fill="var(--muted)" opacity="0.5">Mid-R</text>
-        <text x="150" y="112" text-anchor="middle" font-size="8" fill="var(--muted)" opacity="0.5">Top key</text>
-        <g id="shot-dots"></g>
-      </svg>
+      <svg id="shot-chart-svg" viewBox="0 0 300 165" style="width:100%;display:block;border-radius:8px;" xmlns="http://www.w3.org/2000/svg">
+          <rect x="0" y="0" width="300" height="165" fill="#dbeafe"/>
+          <rect x="3" y="3" width="294" height="159" rx="2" fill="#eff6ff" stroke="#93c5fd" stroke-width="1.5"/>
+          <rect x="88" y="3" width="124" height="92" fill="#bfdbfe" stroke="#60a5fa" stroke-width="1.2"/>
+          <line x1="120" y1="5" x2="180" y2="5" stroke="#1d4ed8" stroke-width="4"/>
+          <circle cx="150" cy="16" r="5" fill="none" stroke="#1d4ed8" stroke-width="2"/>
+          <line x1="88" y1="95" x2="212" y2="95" stroke="#60a5fa" stroke-width="1.2"/>
+          <path d="M 118,95 A 32,32 0 0 1 182,95" fill="none" stroke="#60a5fa" stroke-width="1.2"/>
+          <path d="M 118,95 A 32,32 0 0 0 182,95" fill="none" stroke="#60a5fa" stroke-width="1.2" stroke-dasharray="3,2"/>
+          <rect x="84" y="25" width="4" height="12" fill="#60a5fa"/>
+          <rect x="212" y="25" width="4" height="12" fill="#60a5fa"/>
+          <rect x="84" y="68" width="4" height="12" fill="#60a5fa"/>
+          <rect x="212" y="68" width="4" height="12" fill="#60a5fa"/>
+          <line x1="28" y1="3" x2="28" y2="62" stroke="#60a5fa" stroke-width="1.2"/>
+          <line x1="272" y1="3" x2="272" y2="62" stroke="#60a5fa" stroke-width="1.2"/>
+          <path d="M 28,62 A 130,130 0 0 0 272,62" fill="none" stroke="#60a5fa" stroke-width="1.2"/>
+          <line x1="3" y1="159" x2="297" y2="159" stroke="#93c5fd" stroke-width="1" stroke-dasharray="4,3"/>
+          <text x="150" y="62" text-anchor="middle" font-size="7" fill="#3b82f6" opacity="0.7">Paint</text>
+          <text x="15" y="34" text-anchor="middle" font-size="7" fill="#3b82f6" opacity="0.6">3L</text>
+          <text x="285" y="34" text-anchor="middle" font-size="7" fill="#3b82f6" opacity="0.6">3R</text>
+          <text x="50" y="82" text-anchor="middle" font-size="7" fill="#3b82f6" opacity="0.6">Mid-L</text>
+          <text x="250" y="82" text-anchor="middle" font-size="7" fill="#3b82f6" opacity="0.6">Mid-R</text>
+          <text x="150" y="125" text-anchor="middle" font-size="7" fill="#3b82f6" opacity="0.6">Top key</text>
+          <g id="shot-dots"></g>
+        </svg>
     </div>
     <div style="display:flex;gap:16px;justify-content:center;margin-top:8px;">
-      <span style="font-size:11px;color:var(--muted);display:flex;align-items:center;gap:4px;"><span style="color:var(--green);font-size:12px;">●</span> Made</span>
-      <span style="font-size:11px;color:var(--muted);display:flex;align-items:center;gap:4px;"><span style="color:var(--red);font-weight:700;">✕</span> Missed</span>
+      <span style="font-size:11px;color:var(--muted);display:flex;align-items:center;gap:4px;"><span style="color:var(--green);font-size:14px;">●</span> Made</span>
+      <span style="font-size:11px;color:var(--muted);display:flex;align-items:center;gap:4px;"><span style="color:var(--red);font-weight:700;font-size:13px;">✕</span> Missed</span>
     </div>
   </div>
+  <!-- Zone breakdown -->
   <div class="card" id="sc-zone-card" style="display:none;">
     <div class="sec-label">Zone breakdown</div>
     <div class="tbl-wrap">
@@ -560,14 +573,13 @@ table.stbl td:first-child{text-align:left;font-weight:500;}
       </table>
     </div>
   </div>
+  <!-- Import -->
   <div class="card" style="background:var(--accent-bg);border-color:rgba(59,130,246,0.25);">
-    <div style="font-size:12px;color:var(--accent);font-weight:600;margin-bottom:4px;">📱 Import from Shot Logger</div>
-    <div style="font-size:12px;color:var(--muted);margin-bottom:10px;">After the game, share from <strong>shots.html</strong> and import here to merge shot locations.</div>
-    <button class="btn btn-primary" style="margin-bottom:8px;" onclick="document.getElementById('import-shots-file').click()">⬆ Import shots JSON file</button>
+    <div style="font-size:12px;color:var(--accent);font-weight:600;margin-bottom:4px;">📋 Import from Shot Logger</div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:8px;">Paste the copied shot data from <strong>shots.html</strong> and tap Import.</div>
+    <textarea id="paste-shots-json" placeholder="Paste shot data here..." style="width:100%;height:80px;background:var(--surface2);border:1px solid var(--border2);border-radius:var(--rs);color:var(--text);font-family:'DM Mono',monospace;font-size:11px;padding:8px;resize:none;outline:none;"></textarea>
+    <button class="btn btn-primary" style="margin-top:8px;" onclick="importShotsFromPaste()">⬆ Import shots</button>
     <input type="file" id="import-shots-file" accept=".json" style="display:none;" onchange="importShotsFile(event)"/>
-    <div style="font-size:11px;color:var(--muted);margin-bottom:6px;">Or paste JSON text if share produced a text copy:</div>
-    <textarea id="paste-shots-json" placeholder="Paste JSON here..." style="width:100%;height:60px;background:var(--surface2);border:1px solid var(--border2);border-radius:var(--rs);color:var(--text);font-family:'DM Mono',monospace;font-size:11px;padding:8px;resize:none;outline:none;"></textarea>
-    <button class="btn" style="margin-top:6px;font-size:12px;" onclick="importShotsFromPaste()">Import pasted JSON</button>
   </div>
 </div>
 
@@ -670,8 +682,29 @@ async function sbDeleteGame(gameId){
 let shotCache={};       // { gameId: [shot,...] }
 let scSelectedPlayer='all';
 let scShotFilter='all';
+let scSelectedPeriod='all';
 
-function importShotsFile(e){
+function scResetPeriod(){scSelectedPeriod='all';}
+
+function scRenderPeriodBar(allShots){
+  const bar=document.getElementById('sc-period-bar');if(!bar)return;
+  const periods=[...new Set(allShots.map(s=>s.period))].filter(Boolean).sort((a,b)=>a-b);
+  if(!periods.length){bar.innerHTML='';return;}
+  const lbl=allShots.find(s=>s.period_label)?allShots.find(s=>s.period_label).period_label.charAt(0):'Q';
+  const mkS=a=>a?'background:var(--accent);border-color:var(--accent);color:#fff;border:1px solid var(--accent);':'border:1px solid var(--border2);';
+  let html='<button class="btn" onclick="scSetPeriod(\'all\')" style="flex:1;font-size:11px;padding:6px 4px;'+mkS(scSelectedPeriod==='all')+'">All</button>';
+  periods.forEach(p=>{
+    const active=String(scSelectedPeriod)===String(p);
+    const ps=allShots.filter(s=>s.period===p);
+    const m=ps.filter(s=>s.made).length;
+    html+='<button class="btn" onclick="scSetPeriod('+p+')" style="flex:1;font-size:11px;padding:6px 4px;'+mkS(active)+'">'+lbl+p+'<br><span style="font-weight:400;font-size:10px;">'+m+'/'+ps.length+'</span></button>';
+  });
+  bar.innerHTML=html;
+}
+
+function scSetPeriod(p){scSelectedPeriod=p;renderShotChart();}
+
+
   const file=e.target.files[0];if(!file)return;
   const reader=new FileReader();
   reader.onload=ev=>{
@@ -771,23 +804,30 @@ function renderShotChart(){
   } else {
     shots=getShotsForGame(gameId);
   }
-  // Player pills
+
+  // Period bar (built from unfiltered shots for this game)
+  scRenderPeriodBar(shots);
+
+  // Player pills (built from unfiltered shots)
   const pillsEl=document.getElementById('sc-player-pills');
   if(pillsEl){
     const pids=[...new Set(shots.map(s=>String(s.player_id)))];
     const players=state.players.filter(p=>pids.includes(String(p.id)));
     const mkStyle=a=>a?'background:var(--accent);color:#fff;border-color:var(--accent);border:1px solid var(--accent);':'';
-    pillsEl.innerHTML='<button class="bench-pill" onclick="scSelectPlayer(\'all\')" style="'+mkStyle(scSelectedPlayer==='all')+' font-size:11px;padding:5px 10px;">All</button>';
+    pillsEl.innerHTML='<button class="bench-pill" onclick="scSelectPlayer(\'all\')" style="'+mkStyle(scSelectedPlayer==='all')+' font-size:11px;padding:5px 10px;">All players</button>';
     players.sort((a,b)=>a.id-b.id).forEach(p=>{
       const a=String(scSelectedPlayer)===String(p.id);
-      pillsEl.innerHTML+='<button class="bench-pill" onclick="scSelectPlayer(\''+p.id+'\')" style="'+mkStyle(a)+' font-size:11px;padding:5px 10px;">'+p.num+'</button>';
+      pillsEl.innerHTML+='<button class="bench-pill" onclick="scSelectPlayer(\''+p.id+'\')" style="'+mkStyle(a)+' font-size:11px;padding:5px 10px;">'+p.num+' '+p.name.split(' ')[0]+'</button>';
     });
   }
-  // Filter
+
+  // Apply filters: period → player → made/missed
   let filtered=shots;
+  if(scSelectedPeriod!=='all')filtered=filtered.filter(s=>String(s.period)===String(scSelectedPeriod));
   if(scSelectedPlayer!=='all')filtered=filtered.filter(s=>String(s.player_id)===String(scSelectedPlayer));
   if(scShotFilter==='made')filtered=filtered.filter(s=>s.made);
   if(scShotFilter==='missed')filtered=filtered.filter(s=>!s.made);
+
   // Stats bar
   const made=filtered.filter(s=>s.made).length;
   const total=filtered.length;
@@ -808,18 +848,18 @@ function renderShotChart(){
     const grp=document.createElementNS('http://www.w3.org/2000/svg','g');
     if(s.made){
       const c=document.createElementNS('http://www.w3.org/2000/svg','circle');
-      c.setAttribute('cx',x);c.setAttribute('cy',y);c.setAttribute('r','5');
-      c.setAttribute('fill','var(--green)');c.setAttribute('opacity','0.85');
+      c.setAttribute('cx',x);c.setAttribute('cy',y);c.setAttribute('r','4');
+      c.setAttribute('fill','var(--green)');c.setAttribute('opacity','0.9');
       c.setAttribute('stroke','white');c.setAttribute('stroke-width','1');
       grp.appendChild(c);
     } else {
-      const sz=4;
+      const sz=3.5;
       [['M'+(x-sz)+','+(y-sz)+'L'+(x+sz)+','+(y+sz)],
        ['M'+(x+sz)+','+(y-sz)+'L'+(x-sz)+','+(y+sz)]].forEach(d=>{
         const p=document.createElementNS('http://www.w3.org/2000/svg','path');
         p.setAttribute('d',d);p.setAttribute('stroke','var(--red)');
-        p.setAttribute('stroke-width','2.5');p.setAttribute('stroke-linecap','round');
-        p.setAttribute('opacity','0.85');grp.appendChild(p);
+        p.setAttribute('stroke-width','2');p.setAttribute('stroke-linecap','round');
+        p.setAttribute('opacity','0.9');grp.appendChild(p);
       });
     }
     const title=document.createElementNS('http://www.w3.org/2000/svg','title');
@@ -833,13 +873,13 @@ function renderShotChart(){
 function scSelectPlayer(pid){scSelectedPlayer=pid;renderShotChart();}
 
 const SC_ZONES=[
-  {id:'paint',   label:'Paint',            x1:95, y1:3,  x2:205,y2:83},
-  {id:'corner3l',label:'Corner 3 (Left)',  x1:3,  y1:3,  x2:28, y2:55},
-  {id:'corner3r',label:'Corner 3 (Right)', x1:272,y1:3,  x2:297,y2:55},
-  {id:'midl',    label:'Mid-range (Left)', x1:3,  y1:55, x2:95, y2:130},
-  {id:'midr',    label:'Mid-range (Right)',x1:205,y1:55, x2:297,y2:130},
-  {id:'topkey',  label:'Top of key / 3pt', x1:95, y1:83, x2:205,y2:130},
-  {id:'other',   label:'Backcourt',        x1:3,  y1:130,x2:297,y2:162},
+  {id:'paint',   label:'Paint',            x1:88,  y1:3,  x2:212, y2:95},
+  {id:'corner3l',label:'Corner 3 (Left)',  x1:3,   y1:3,  x2:28,  y2:62},
+  {id:'corner3r',label:'Corner 3 (Right)', x1:272, y1:3,  x2:297, y2:62},
+  {id:'midl',    label:'Mid-range (Left)', x1:3,   y1:62, x2:88,  y2:130},
+  {id:'midr',    label:'Mid-range (Right)',x1:212, y1:62, x2:297, y2:130},
+  {id:'topkey',  label:'Top of key / 3pt', x1:88,  y1:95, x2:212, y2:130},
+  {id:'other',   label:'Backcourt',        x1:3,   y1:130,x2:297, y2:162},
 ];
 
 function getZone(x,y){
