@@ -453,7 +453,6 @@ table.stbl td:first-child{text-align:left;font-weight:500;}
       <select class="tl-game-sel" id="tl-game-sel" onchange="renderTimeline()">
         <option value="live">Current game</option>
       </select>
-      <div class="tl-export-btn" onclick="exportTimeline()">⬇ Export</div>
     </div>
     <div class="tl-game-info" id="tl-game-info"></div>
     <div id="tl-content"><div class="tl-empty">No events yet</div></div>
@@ -462,6 +461,14 @@ table.stbl td:first-child{text-align:left;font-weight:500;}
 
 <!-- ═══ SEASON ═══ -->
 <div id="screen-season" class="screen">
+  <!-- W/L record summary -->
+  <div id="season-record-bar" style="display:none;background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:10px 14px;margin-bottom:10px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;box-shadow:0 1px 3px rgba(0,0,0,0.04);">
+    <div style="font-size:13px;font-weight:700;color:var(--text);" id="wl-record">—</div>
+    <div style="width:1px;height:20px;background:var(--border2);"></div>
+    <div style="font-size:12px;color:var(--muted);" id="wl-scored">—</div>
+    <div style="width:1px;height:20px;background:var(--border2);"></div>
+    <div style="font-size:12px;color:var(--muted);" id="wl-diff">—</div>
+  </div>
   <!-- season view toggle -->
   <div style="display:flex;gap:6px;margin-bottom:10px;">
     <button class="btn" id="sv-results-btn" onclick="setSeasonView('results')" style="flex:1;">Results</button>
@@ -478,9 +485,13 @@ table.stbl td:first-child{text-align:left;font-weight:500;}
   <div id="sv-stats" style="display:none;">
     <div class="card">
       <div class="sec-label">Season stats</div>
-      <div style="font-size:12px;color:var(--muted);margin-bottom:8px;"><span id="game-count">0</span> games played</div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:4px;"><span id="game-count">0</span> games played &nbsp;·&nbsp; <span style="color:var(--muted);">Avg = per game played by that player</span></div>
+      <div style="display:flex;gap:6px;margin-bottom:8px;">
+        <button class="btn sv-btn-active" id="stats-view-total" onclick="setStatsView('total')" style="font-size:11px;padding:5px 10px;">Totals</button>
+        <button class="btn" id="stats-view-avg" onclick="setStatsView('avg')" style="font-size:11px;padding:5px 10px;">Per game avg</button>
+      </div>
       <div class="tbl-wrap">
-        <table class="stbl"><thead><tr><th style="min-width:100px;">Player</th><th>PTS</th><th>FTM</th><th>FTA</th><th>FT%</th><th>FGM</th><th>FGA</th><th>FG%</th><th>AST</th><th>REB</th><th>STL</th><th>BLK</th><th>TO</th><th>FL</th></tr></thead><tbody id="season-stats-body"></tbody></table>
+        <table class="stbl"><thead><tr><th style="min-width:100px;">Player</th><th>GP</th><th>PTS</th><th>FTM</th><th>FTA</th><th>FT%</th><th>FGM</th><th>FGA</th><th>FG%</th><th>AST</th><th>REB</th><th>STL</th><th>BLK</th><th>TO</th><th>FL</th><th>+/−</th></tr></thead><tbody id="season-stats-body"></tbody></table>
       </div>
     </div>
   </div>
@@ -1254,11 +1265,14 @@ function renderOnCourtSection(){
   sorted.forEach(pid=>{
     const p=state.players.find(p=>p.id===pid);if(!p)return;
     const isSelected=selectedPid===pid;
+    const fouls=cg.stats&&cg.stats[pid]?cg.stats[pid].foul||0:0;
+    const foulWarn=fouls>=4?'🔴':fouls===3?'🟡':'';
     const row=document.createElement('div');
     row.className='court-player-row'+(isSelected?' selected':'');
     row.innerHTML=`
       <span class="court-p-num">${p.num}</span>
       <span class="court-p-name">${p.name}</span>
+      ${foulWarn?`<span style="font-size:11px;" title="${fouls} fouls">${foulWarn}${fouls}F</span>`:''}
       <button class="court-sel-btn">${isSelected?'✓':'Select'}</button>`;
     row.querySelector('.court-sel-btn').onclick=(e)=>{e.stopPropagation();selectPlayer(pid);};
     list.appendChild(row);
@@ -1484,92 +1498,6 @@ function renderTimeline(){
 }
 
 /* ── EXPORT TIMELINE — opens new tab (iOS compatible) ── */
-function exportTimeline(){
-  const sel=document.getElementById('tl-game-sel');
-  const val=sel?sel.value:'live';
-  const source=val==='live'?state.currentGame:state.games[parseInt(val)];
-  if(!source){alert('No game selected.');return;}
-
-  const sorted=[...state.players].sort((a,b)=>a.id-b.id);
-  const oppName=source.opponent||'Opponent';
-
-  let statsRows='';
-  sorted.forEach(p=>{
-    const m=source.summary?source.summary.minutes[p.id]||0:(source.minutes?source.minutes[p.id]||0:0);
-    const s=source.summary?source.summary.stats[p.id]||emptyStats():(source.stats?source.stats[p.id]||emptyStats():emptyStats());
-    const fg=s.fga>0?Math.round(s.fgm/s.fga*100)+'%':'—';
-    const ftpctExp=s.fta>0?Math.round((s.ftm||0)/s.fta*100)+'%':'—';
-    statsRows+=`<tr><td>${p.num}</td><td>${p.name}</td><td>${fmtMins(m)}</td><td>${s.pts||0}</td><td>${s.ftm||0}</td><td>${s.fta||0}</td><td>${ftpctExp}</td><td>${s.fgm}</td><td>${s.fga}</td><td>${fg}</td><td>${s.ast}</td><td>${s.reb}</td><td>${s.stl}</td><td>${s.blk}</td><td>${s.tov}</td><td>${s.foul||0}</td></tr>`;
-  });
-
-  const evLabels={
-    pts_1:ev=>ev.data.player+' — Free throw (+1)',
-    pts_2:ev=>ev.data.player+' — Field goal (+2)',
-    pts_3:ev=>ev.data.player+' — Three pointer (+3)',
-    pts:ev=>ev.data.player+' — '+ev.data.label,
-    opp_pts:ev=>oppName+' — +'+ev.data.pts+' pts',
-    sub_on:ev=>'Sub on: '+ev.data.player,
-    sub_off:ev=>'Sub off: '+ev.data.player,
-    timeout:()=>'Timeout — Eltham',
-    opp_timeout:()=>'Timeout — '+oppName,
-    fga:ev=>ev.data.player+' — Missed shot (FGA)',
-    ft_miss:ev=>ev.data.player+' — Free throw missed',
-    ast:ev=>ev.data.player+' — Assist',
-    reb:ev=>ev.data.player+' — Rebound',
-    stl:ev=>ev.data.player+' — Steal',
-    blk:ev=>ev.data.player+' — Block',
-    tov:ev=>ev.data.player+' — Turnover',
-    foul:ev=>ev.data.player+' — Personal foul',
-    qend:ev=>'End of Q'+(ev.q||''),
-    start:ev=>ev.data.label||'Game started'
-  };
-
-  let tlRows='';
-  if(source.timeline){
-    source.timeline.forEach(ev=>{
-      const fn=evLabels[ev.type];
-      const desc=fn?fn(ev):ev.type;
-      tlRows+=`<tr><td>Q${ev.q||''}</td><td>${ev.ts}</td><td>${desc}</td><td>${ev.scoreHome}–${ev.scoreAway}</td></tr>`;
-    });
-  }
-
-  const roundStr=source.round?'Round '+source.round+' — ':'';const modeStr=source.gameType==='domestic'?' (Domestic)':' (Rep)';const html=`<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Wildcats — ${roundStr}${source.date} vs ${oppName}${modeStr}</title>
-<style>
-body{font-family:Arial,sans-serif;padding:20px;color:#1a1a2e;max-width:800px;margin:0 auto;}
-h1{font-size:20px;margin-bottom:4px;}
-.meta{font-size:13px;color:#666;margin-bottom:20px;}
-h2{font-size:15px;margin:20px 0 8px;border-bottom:2px solid #3b82f6;padding-bottom:4px;color:#3b82f6;}
-table{width:100%;border-collapse:collapse;font-size:13px;margin-bottom:16px;}
-th{background:#f0f4ff;padding:7px 8px;text-align:left;font-weight:600;border-bottom:2px solid #dde;}
-td{padding:7px 8px;border-bottom:1px solid #eee;}
-.score-wrap{display:flex;gap:40px;margin-bottom:20px;}
-.sc{text-align:center;background:#f8faff;border-radius:10px;padding:12px 20px;}
-.sc-name{font-size:11px;color:#666;margin-bottom:2px;font-weight:600;text-transform:uppercase;}
-.sc-num{font-size:36px;font-weight:700;}
-.sc-num.h{color:#16a34a;}.sc-num.a{color:#dc2626;}
-@media print{button{display:none;}}
-</style></head><body>
-<h1>Eltham Wildcats U12 Girls 2 — ${roundStr}Game Report</h1>
-<div class="meta">${[source.date,source.time,'vs '+oppName,source.venue].filter(Boolean).join(' · ')}</div>
-<div class="score-wrap">
-  <div class="sc"><div class="sc-name">Eltham</div><div class="sc-num h">${source.scoreHome||0}</div></div>
-  <div class="sc"><div class="sc-name">${oppName}</div><div class="sc-num a">${source.scoreAway||0}</div></div>
-</div>
-<h2>Player Stats</h2>
-<table><thead><tr><th>#</th><th>Player</th><th>MIN</th><th>PTS</th><th>FTM</th><th>FTA</th><th>FT%</th><th>FGM</th><th>FGA</th><th>FG%</th><th>AST</th><th>REB</th><th>STL</th><th>BLK</th><th>TO</th><th>FL</th></tr></thead>
-<tbody>${statsRows}</tbody></table>
-<h2>Game Timeline</h2>
-<table><thead><tr><th>Qtr</th><th>Time</th><th>Event</th><th>Score</th></tr></thead>
-<tbody>${tlRows}</tbody></table>
-<p style="font-size:11px;color:#999;margin-top:20px;">Generated by Eltham Wildcats U12 Tracker</p>
-</body></html>`;
-
-  // Open in new tab — works on iOS Safari
-  const w=window.open('','_blank');
-  if(w){w.document.write(html.replace('Game Report','${roundStr}Game Report'));w.document.close();}
-  else{alert('Please allow popups for this site to export the report.');}
-}
 
 /* ── GAME CONTROL ── */
 function startGame(){
@@ -1728,18 +1656,19 @@ function logAction(type){
   else if(type==='tov'){s.tov++;addEvent('tov',{player:pname});}
   else if(type==='foul'){s.foul++;addEvent('foul',{player:pname});}
 
-  // Store the event's unique ID (not index) so undo is always correct
+  // Store event's unique ID — immune to index shifting on undo
   const tlEventId=cg.timeline&&cg.timeline.length>0?cg.timeline[cg.timeline.length-1].id:null;
   actionLog.push({pid:selectedPid,type,pts,tlEventId});
   document.getElementById('last-action').textContent=pname+' — '+labels[type];
-  save();renderRosterTable();renderScores();
+  // Auto-deselect: prevents misattribution on fast sequences
+  selectedPid=null;
+  save();renderRosterTable();renderScores();renderOnCourtSection();renderActionPanel();
 }
 
 function undoAction(){
   const cg=state.currentGame;if(!cg||actionLog.length===0){document.getElementById('last-action').textContent='Nothing to undo.';return;}
   const last=actionLog.pop();
   const s=cg.stats[last.pid];
-  // Reverse stat
   if(last.type==='1pt'){
     if(s.ftm>0)s.ftm--;if(s.fta>0)s.fta--;s.pts=Math.max(0,s.pts-last.pts);cg.scoreHome=Math.max(0,cg.scoreHome-last.pts);
   } else if(last.type==='2pt'||last.type==='3pt'){
@@ -1747,7 +1676,7 @@ function undoAction(){
   } else if(last.type==='ft_miss'){if(s.fta>0)s.fta--;}
   else if(last.type==='fga'){if(s.fga>0)s.fga--;}
   else{if(s[last.type]!==undefined&&s[last.type]>0)s[last.type]--;}
-  // Remove timeline event by its unique ID — immune to index shifting
+  // Remove by unique ID — safe regardless of what else was undone
   if(cg.timeline&&last.tlEventId!=null){
     const pos=cg.timeline.findIndex(e=>e.id===last.tlEventId);
     if(pos!==-1)cg.timeline.splice(pos,1);
@@ -1890,6 +1819,28 @@ function renderSeason(){
   const gc=document.getElementById('game-count');
   if(gc)gc.textContent=games.length;
 
+  // ── W/L RECORD ──
+  const recBar=document.getElementById('season-record-bar');
+  if(recBar){
+    if(games.length>0){
+      recBar.style.display='flex';
+      let w=0,l=0,d=0,pf=0,pa=0;
+      games.forEach(g=>{
+        const diff=(g.scoreHome||0)-(g.scoreAway||0);
+        pf+=(g.scoreHome||0);pa+=(g.scoreAway||0);
+        if(diff>0)w++;else if(diff<0)l++;else d++;
+      });
+      const recStr=d>0?`${w}W – ${l}L – ${d}D`:`${w}W – ${l}L`;
+      const diffVal=pf-pa;const diffStr=(diffVal>=0?'+':'')+diffVal;
+      const diffCol=diffVal>0?'var(--green)':diffVal<0?'var(--red)':'var(--muted)';
+      document.getElementById('wl-record').textContent=recStr;
+      document.getElementById('wl-scored').textContent=`${pf} pts for · ${pa} against`;
+      document.getElementById('wl-diff').innerHTML=`Net <strong style="color:${diffCol};">${diffStr}</strong>`;
+    } else {
+      recBar.style.display='none';
+    }
+  }
+
   // ── RESULTS VIEW ──
   const resList=document.getElementById('season-results-list');
   if(resList){
@@ -1943,27 +1894,65 @@ function renderSeason(){
 
   // ── STATS ──
   if(games.length===0){
-    document.getElementById('season-stats-body').innerHTML='<tr><td colspan="13" style="color:var(--muted);padding:12px 0;">No games yet</td></tr>';
+    document.getElementById('season-stats-body').innerHTML='<tr><td colspan="16" style="color:var(--muted);padding:12px 0;">No games yet</td></tr>';
     renderMinsSections();
     return;
   }
-  const totStats={};
-  state.players.forEach(p=>{totStats[p.id]=emptyStats();});
+  const totStats={};const gpCount={};const totPm={};
+  state.players.forEach(p=>{totStats[p.id]=emptyStats();gpCount[p.id]=0;totPm[p.id]=0;});
   games.forEach(g=>{
-    if(g.summary&&g.summary.stats){
+    if(g.summary){
       state.players.forEach(p=>{
-        ['fgm','fga','ftm','fta','ast','reb','stl','blk','tov','foul','pts'].forEach(k=>{totStats[p.id][k]+=(g.summary.stats[p.id]?g.summary.stats[p.id][k]||0:0);});
+        const hasMins=(g.summary.minutes[p.id]||0)>0.5;
+        if(hasMins)gpCount[p.id]++;
+        if(g.summary.stats){
+          ['fgm','fga','ftm','fta','ast','reb','stl','blk','tov','foul','pts'].forEach(k=>{totStats[p.id][k]+=(g.summary.stats[p.id]?g.summary.stats[p.id][k]||0:0);});
+        }
+        totPm[p.id]+=(g.summary.plusMinus?g.summary.plusMinus[p.id]||0:0);
       });
     }
   });
-  const sorted=[...state.players].sort((a,b)=>a.id-b.id);
-  document.getElementById('season-stats-body').innerHTML=sorted.map(p=>{
-    const s=totStats[p.id];const fg=s.fga>0?Math.round(s.fgm/s.fga*100)+'%':'—';const ft=s.fta>0?Math.round(s.ftm/s.fta*100)+'%':'—';
-    return`<tr><td>${p.num} ${p.name}</td><td>${s.pts||0}</td><td>${s.ftm||0}</td><td>${s.fta||0}</td><td>${ft}</td><td>${s.fgm}</td><td>${s.fga}</td><td>${fg}</td><td>${s.ast}</td><td>${s.reb}</td><td>${s.stl}</td><td>${s.blk}</td><td>${s.tov}</td><td style="color:var(--amber);">${s.foul||0}</td></tr>`;
-  }).join('');
-
-  // ── MINS (handled by renderMinsSections) ──
+  renderSeasonStatsTable(totStats,gpCount,totPm);
   renderMinsSections();
+}
+
+let currentStatsView='total';
+function setStatsView(v){
+  currentStatsView=v;
+  ['total','avg'].forEach(n=>{
+    const b=document.getElementById('stats-view-'+n);
+    if(b)b.className=n===v?'btn sv-btn-active':'btn';
+    if(b)b.style.cssText='font-size:11px;padding:5px 10px;';
+  });
+  // Re-render with current data
+  renderSeason();
+}
+
+function renderSeasonStatsTable(totStats,gpCount,totPm){
+  const isAvg=currentStatsView==='avg';
+  const sorted=[...state.players].sort((a,b)=>a.id-b.id);
+  function fmt(v,gp){
+    if(isAvg){if(!gp)return'—';return(v/gp).toFixed(1);}
+    return v;
+  }
+  function fmtPct(made,att){return att>0?Math.round(made/att*100)+'%':'—';}
+  document.getElementById('season-stats-body').innerHTML=sorted.map(p=>{
+    const s=totStats[p.id];const gp=gpCount[p.id];const pm=totPm[p.id];
+    const fg=fmtPct(s.fgm,s.fga);const ft=fmtPct(s.ftm||0,s.fta);
+    const pmStr=pm>0?'+'+pm:pm;const pmCol=pm>0?'var(--green)':pm<0?'var(--red)':'var(--muted)';
+    if(!gp)return`<tr style="opacity:0.45;"><td>${p.num} ${p.name}</td><td>0</td><td colspan="14" style="color:var(--muted);font-size:11px;">No games played</td></tr>`;
+    return`<tr>
+      <td>${p.num} ${p.name}</td>
+      <td style="color:var(--muted);">${gp}</td>
+      <td style="font-weight:600;">${fmt(s.pts||0,gp)}</td>
+      <td>${fmt(s.ftm||0,gp)}</td><td>${fmt(s.fta,gp)}</td><td style="color:var(--muted);">${ft}</td>
+      <td style="color:#2563eb;">${fmt(s.fgm,gp)}</td><td>${fmt(s.fga,gp)}</td><td style="color:var(--muted);">${fg}</td>
+      <td>${fmt(s.ast,gp)}</td><td>${fmt(s.reb,gp)}</td><td>${fmt(s.stl,gp)}</td><td>${fmt(s.blk,gp)}</td>
+      <td style="color:var(--red);">${fmt(s.tov,gp)}</td>
+      <td style="color:var(--amber);">${fmt(s.foul||0,gp)}</td>
+      <td style="color:${pmCol};font-weight:600;">${pmStr}</td>
+    </tr>`;
+  }).join('');
 }
 
 
@@ -1971,7 +1960,20 @@ function openEditModal(idx){
   editingGameIdx=idx;const g=state.games[idx];
   document.getElementById('edit-modal-title').textContent='Edit: '+g.date+' vs '+g.opponent;
   const sorted=[...state.players].sort((a,b)=>a.id-b.id);
-  let html=`<div style="overflow-x:auto;"><table class="edit-tbl">
+  let html=`
+  <div style="margin-bottom:12px;border-bottom:1px solid var(--border);padding-bottom:12px;">
+    <div style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.6px;margin-bottom:8px;">Game details</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">
+      <div><div class="field-label">Opposition</div><input type="text" id="edit-opponent" value="${g.opponent||''}"/></div>
+      <div><div class="field-label">Round</div><input type="text" id="edit-round" value="${g.round||''}"/></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">
+      <div><div class="field-label">Date</div><input type="text" id="edit-date" value="${g.date||''}"/></div>
+      <div><div class="field-label">Time</div><input type="text" id="edit-time" value="${g.time||''}"/></div>
+    </div>
+    <div><div class="field-label">Venue</div><input type="text" id="edit-venue" value="${g.venue||''}"/></div>
+  </div>
+  <div style="overflow-x:auto;"><table class="edit-tbl">
     <thead><tr><th>Player</th><th>MIN</th><th>PTS</th><th>FTM</th><th>FTA</th><th>FGM</th><th>FGA</th><th>AST</th><th>REB</th><th>STL</th><th>BLK</th><th>TO</th><th>FL</th></tr></thead><tbody>`;
   sorted.forEach(p=>{
     const mins=g.summary?Math.round(g.summary.minutes[p.id]||0):0;
@@ -1993,7 +1995,7 @@ function openEditModal(idx){
   html+=`</tbody></table></div>
   <div style="margin-top:12px;display:grid;grid-template-columns:1fr 1fr;gap:8px;">
     <div><div class="field-label" style="margin-bottom:4px;">Eltham score</div><input type="text" id="edit-score-home" value="${g.scoreHome||0}"/></div>
-    <div><div class="field-label" style="margin-bottom:4px;">${g.opponent} score</div><input type="text" id="edit-score-away" value="${g.scoreAway||0}"/></div>
+    <div><div class="field-label" style="margin-bottom:4px;">${g.opponent||'Opp'} score</div><input type="text" id="edit-score-away" value="${g.scoreAway||0}"/></div>
   </div>`;
   document.getElementById('edit-modal-body').innerHTML=html;
   document.getElementById('edit-modal').classList.add('visible');
@@ -2001,6 +2003,18 @@ function openEditModal(idx){
 function saveEditModal(){
   if(editingGameIdx===null)return;const g=state.games[editingGameIdx];
   if(!g.summary)g.summary={minutes:{},stats:{}};
+  // Save game metadata
+  const opp=document.getElementById('edit-opponent')?.value.trim();
+  const round=document.getElementById('edit-round')?.value.trim();
+  const date=document.getElementById('edit-date')?.value.trim();
+  const time=document.getElementById('edit-time')?.value.trim();
+  const venue=document.getElementById('edit-venue')?.value.trim();
+  if(opp!==undefined)g.opponent=opp;
+  if(round!==undefined)g.round=round;
+  if(date!==undefined)g.date=date;
+  if(time!==undefined)g.time=time;
+  if(venue!==undefined)g.venue=venue;
+  // Save player stats
   document.querySelectorAll('#edit-modal-body .edit-input').forEach(input=>{
     const pid=parseInt(input.dataset.pid);const field=input.dataset.field;const val=parseInt(input.value)||0;
     if(field==='mins')g.summary.minutes[pid]=val;
@@ -2162,6 +2176,7 @@ function openGameDetail(idx){
       <div style="font-size:13px;color:var(--muted);">${g.date}${g.time?' · '+g.time:''}${g.venue?' · '+g.venue:''}</div>
       <div style="display:flex;gap:6px;">
         <button class="btn btn-primary" style="padding:5px 10px;font-size:12px;" onclick="openGameReport(${idx})">📄 Report</button>
+        <button class="btn" style="padding:5px 10px;font-size:12px;" onclick="exportTimelineForGame(${idx})">⬇ Export</button>
       </div>
     </div>
     <div style="display:flex;align-items:center;justify-content:center;gap:20px;padding:12px 0;">
@@ -2241,14 +2256,6 @@ function closeGameDetail(){
   setSeasonView(currentSeasonView);
 }
 
-function exportTimelineForGame(idx){
-  const sel=document.getElementById('tl-game-sel');
-  // temporarily set selector to this game and export
-  const prevVal=sel?sel.value:'0';
-  if(sel)sel.value=idx;
-  exportTimeline();
-  if(sel)sel.value=prevVal;
-}
 
 /* ── GAME REPORT (PDF-ready, iOS-compatible) ── */
 function computePlusMinus(g){
@@ -2375,6 +2382,47 @@ function openGameReport(idx){
     <td>${totAst}</td><td>${totReb}</td><td>${totStl}</td><td>${totBlk}</td>
     <td style="color:#dc2626;">${totTov}</td><td style="color:#d97706;">${totFoul}</td><td>—</td>
   </tr>`;
+
+  // ── QUARTER SCORE BREAKDOWN ──
+  let qScoreHtml='';
+  if(g.timeline&&g.timeline.length>0){
+    const periodKeys=isDom?['Q1','Q2']:['Q1','Q2','Q3','Q4'];
+    const periodDisplay=isDom?{Q1:'H1',Q2:'H2'}:{Q1:'Q1',Q2:'Q2',Q3:'Q3',Q4:'Q4'};
+    // Find the score at the end of each period from qend events, or last event in that period
+    const periodScores=[];
+    let prevHome=0,prevAway=0;
+    periodKeys.forEach(qk=>{
+      const qEvs=g.timeline.filter(ev=>'Q'+(ev.q||1)===qk);
+      if(!qEvs.length)return;
+      // Use qend event if available, else last event in period
+      const qend=qEvs.find(ev=>ev.type==='qend');
+      const ref=qend||qEvs[qEvs.length-1];
+      const endHome=ref.scoreHome||0;const endAway=ref.scoreAway||0;
+      periodScores.push({
+        label:periodDisplay[qk]||qk,
+        eltham:endHome-prevHome,
+        opp:endAway-prevAway,
+        cumHome:endHome,cumAway:endAway
+      });
+      prevHome=endHome;prevAway=endAway;
+    });
+    if(periodScores.length>0){
+      const cells=periodScores.map(p=>{
+        const diff=p.eltham-p.opp;
+        const col=diff>0?'#1a6b4a':diff<0?'#991b1b':'#666';
+        return`<td style="text-align:center;padding:8px 10px;">
+          <div style="font-size:11px;color:#888;font-weight:600;margin-bottom:3px;">${p.label}</div>
+          <div style="font-size:16px;font-weight:700;color:${col};">${p.eltham}–${p.opp}</div>
+        </td>`;
+      }).join('<td style="padding:8px 4px;color:#ddd;font-size:16px;vertical-align:middle;">|</td>');
+      qScoreHtml=`<h2>Score by ${isDom?'half':'quarter'}</h2>
+        <div style="overflow-x:auto;margin-bottom:8px;">
+          <table style="border-collapse:collapse;">
+            <tbody><tr>${cells}</tr></tbody>
+          </table>
+        </div>`;
+    }
+  }
 
   // Timeline
   let tlHtml='';
@@ -2601,6 +2649,8 @@ tfoot td{background:#f5f5f7;font-size:11px;border-top:2px solid #dde;border-bott
 </table>
 </div>
 <div class="note">${methodNote}</div>
+
+${qScoreHtml}
 
 ${shotChartHtml}
 
