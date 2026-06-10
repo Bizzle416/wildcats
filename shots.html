@@ -39,6 +39,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
 .btn-primary{background:var(--accent);border-color:var(--accent);color:#fff;}
 .btn-green{background:var(--green-bg);border-color:rgba(22,163,74,0.35);color:var(--green);}
 .btn-red{background:var(--red-bg);border-color:rgba(220,38,38,0.35);color:var(--red);}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
 
 /* ── SETUP ── */
 .setup-wrap{max-width:420px;margin:24px auto 0;padding:0 14px;}
@@ -243,20 +244,34 @@ select:focus,input:focus{border-color:var(--accent);}
       <div id="shot-log"><div class="log-empty">No shots yet</div></div>
     </div>
 
-    <!-- Export -->
-    <div class="card export-card">
-      <div class="sec-label" style="color:var(--green);">Export &amp; merge</div>
+    <!-- End Game / Export -->
+    <div class="card" id="end-game-card">
+      <div class="sec-label" style="margin-bottom:6px;">Finished logging?</div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:10px;line-height:1.55;">Tap End Game to lock the court and export your shots.</div>
+      <button class="btn btn-primary" onclick="endGame()">🏁 End Game</button>
+    </div>
+
+    <!-- Export (hidden until End Game tapped) -->
+    <div class="card export-card" id="export-card" style="display:none;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+        <div class="sec-label" style="margin-bottom:0;color:var(--green);">Export &amp; merge</div>
+        <div style="font-size:11px;color:var(--muted);" id="export-summary"></div>
+      </div>
       <div style="font-size:12px;color:var(--muted);margin-bottom:10px;line-height:1.55;">
-        After the game: tap Copy, then paste into the <strong>Shot Chart</strong> tab on the main tracker.
+        Tap Copy, then paste into the <strong>Shot Chart</strong> tab on the main tracker.
       </div>
       <textarea id="copy-json" readonly placeholder="Tap Copy to generate..." style="width:100%;height:80px;background:var(--surface2);border:1px solid var(--border2);border-radius:var(--rs);color:var(--text);font-family:'DM Mono',monospace;font-size:10px;padding:8px;resize:none;outline:none;-webkit-user-select:all;user-select:all;margin-bottom:8px;"></textarea>
       <button class="btn btn-green" onclick="exportShots()">📋 Copy shots to clipboard</button>
       <div style="margin-top:8px;font-size:11px;color:var(--muted);" id="export-note"></div>
     </div>
 
-    <!-- Danger -->
+    <!-- Bottom actions -->
     <div class="card">
-      <button class="btn btn-red" onclick="clearSession()">Reset — clear all shots</button>
+      <div class="g2" style="margin-bottom:8px;">
+        <button class="btn btn-primary" onclick="newGame()">🏀 New Game</button>
+        <button class="btn btn-red" onclick="clearSession()">🗑 Reset all shots</button>
+      </div>
+      <div style="font-size:11px;color:var(--muted);text-align:center;">New Game keeps shot history · Reset clears everything</div>
     </div>
 
   </div>
@@ -546,12 +561,69 @@ async function exportShots(){
   }
 }
 
+function endGame(){
+  if(!shots.length){
+    toast('No shots logged yet');return;
+  }
+  // Lock the court — disable tapping
+  const svg=document.getElementById('court-svg');
+  if(svg)svg.style.pointerEvents='none';
+  // Hide the logging panels, show export
+  document.getElementById('end-game-card').style.display='none';
+  document.getElementById('export-card').style.display='block';
+  // Update header
+  document.getElementById('header-sub').textContent=gameLabel+' — Game ended';
+  // Show summary
+  const made=shots.filter(s=>s.made).length;
+  const pct=Math.round(made/shots.length*100);
+  const sumEl=document.getElementById('export-summary');
+  if(sumEl)sumEl.textContent=shots.length+' shots · '+made+' made · '+pct+'%';
+  // Auto-generate the clipboard text ready to go
+  exportShots();
+  // Scroll to export card
+  document.getElementById('export-card').scrollIntoView({behavior:'smooth',block:'start'});
+  toast('Game ended — ready to export');
+}
+
+function newGame(){
+  // Keep shots in localStorage (for export) but go back to setup for new session
+  // Reset session variables without clearing shots array
+  selectedPlayer=null;selectedMade=null;currentPeriod=1;
+  pendingX=null;pendingY=null;
+  cancelShot();
+  // Re-enable court in case it was locked
+  const svg=document.getElementById('court-svg');
+  if(svg)svg.style.pointerEvents='';
+  // Reset UI state
+  document.getElementById('btn-made').classList.remove('active');
+  document.getElementById('btn-missed').classList.remove('active');
+  document.getElementById('end-game-card').style.display='block';
+  document.getElementById('export-card').style.display='none';
+  // Go to setup screen
+  document.getElementById('logger-screen').style.display='none';
+  document.getElementById('setup-screen').style.display='block';
+  document.getElementById('header-sub').textContent='Not connected';
+  // Clear session storage so new game starts fresh
+  shots=[];gameLabel='';periodCount=4;periodLabel='Q';currentPeriod=1;
+  document.getElementById('shot-dots').innerHTML='';
+  document.getElementById('shot-counter').textContent='0 shots';
+  save();
+  toast('Ready for next game');
+}
+
 function clearSession(){
   if(!confirm('Clear all shots and start over?'))return;
   shots=[];pendingX=null;pendingY=null;selectedPlayer=null;selectedMade=null;
+  gameLabel='';periodCount=4;periodLabel='Q';currentPeriod=1;
   save();
   document.getElementById('shot-dots').innerHTML='';
   cancelShot();renderLog();
+  const svg=document.getElementById('court-svg');
+  if(svg)svg.style.pointerEvents='';
+  document.getElementById('btn-made').classList.remove('active');
+  document.getElementById('btn-missed').classList.remove('active');
+  document.getElementById('end-game-card').style.display='block';
+  document.getElementById('export-card').style.display='none';
   document.getElementById('logger-screen').style.display='none';
   document.getElementById('setup-screen').style.display='block';
   document.getElementById('header-sub').textContent='Not connected';
