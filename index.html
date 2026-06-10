@@ -363,8 +363,21 @@ table.stbl td:first-child{text-align:left;font-weight:500;}
     </div>
     <div class="g3" style="margin-bottom:8px;">
       <button class="btn btn-primary" id="pause-btn" onclick="togglePause()">Pause</button>
-      <button class="btn btn-amber" onclick="resetQClock()">Reset Q</button>
+      <button class="btn btn-amber" onclick="openSetClock()">Set Clock</button>
       <button class="btn btn-red" onclick="endGame()">End game</button>
+    </div>
+    <!-- inline clock setter — hidden until Set Clock tapped -->
+    <div id="set-clock-bar" style="display:none;background:var(--surface2);border:1px solid var(--border2);border-radius:var(--rs);padding:8px 10px;margin-bottom:8px;">
+      <div style="font-size:11px;color:var(--muted);margin-bottom:6px;font-weight:500;">Set clock to (mm:ss) — will resume if running</div>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <input id="set-clock-min" type="number" min="0" max="99" placeholder="mm"
+          style="width:60px;background:var(--surface);border:1px solid var(--border2);border-radius:var(--rs);color:var(--text);font-family:'DM Mono',monospace;font-size:18px;padding:6px 8px;text-align:center;outline:none;-webkit-appearance:none;"/>
+        <span style="font-size:20px;font-weight:600;color:var(--muted);">:</span>
+        <input id="set-clock-sec" type="number" min="0" max="59" placeholder="ss"
+          style="width:60px;background:var(--surface);border:1px solid var(--border2);border-radius:var(--rs);color:var(--text);font-family:'DM Mono',monospace;font-size:18px;padding:6px 8px;text-align:center;outline:none;-webkit-appearance:none;"/>
+        <button class="btn btn-primary" style="flex:1;padding:8px;" onclick="confirmSetClock()">Set</button>
+        <button class="btn" style="padding:8px 12px;" onclick="cancelSetClock()">✕</button>
+      </div>
     </div>
     <div class="g2">
       <button class="btn btn-green" onclick="callTimeout('Eltham')">Eltham T/O</button>
@@ -1636,6 +1649,40 @@ function callTimeout(team){
 }
 
 function resetQClock(){const cg=state.currentGame;if(!cg)return;cg.qRemaining=cg.periodSecs||Q_SECS_REP;save();renderTimer();}
+
+function openSetClock(){
+  const cg=state.currentGame;if(!cg)return;
+  // Pre-fill with current time remaining
+  const secs=Math.max(0,Math.ceil(cg.qRemaining));
+  document.getElementById('set-clock-min').value=Math.floor(secs/60);
+  document.getElementById('set-clock-sec').value=String(secs%60).padStart(2,'0');
+  document.getElementById('set-clock-bar').style.display='block';
+  // Focus the minutes field
+  setTimeout(()=>document.getElementById('set-clock-min').focus(),50);
+}
+
+function cancelSetClock(){
+  document.getElementById('set-clock-bar').style.display='none';
+}
+
+function confirmSetClock(){
+  const cg=state.currentGame;if(!cg)return;
+  const mins=parseInt(document.getElementById('set-clock-min').value)||0;
+  const secs=parseInt(document.getElementById('set-clock-sec').value)||0;
+  const totalSecs=Math.max(0,mins*60+secs);
+  const wasRunning=cg.running;
+  // Pause, update, resume if was running
+  if(wasRunning)pauseInternal();
+  cg.qRemaining=totalSecs;
+  cg.lastTick=Date.now();
+  if(wasRunning){
+    cg.running=true;
+    cg.onCourt.forEach(pid=>{cg.stints[pid]=Date.now();});
+    startTimer();
+  }
+  document.getElementById('set-clock-bar').style.display='none';
+  save();renderTimer();renderStatus();
+}
 
 function setQuarter(q){
   const cg=state.currentGame;if(!cg)return;
