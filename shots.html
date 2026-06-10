@@ -265,7 +265,8 @@ select:focus,input:focus{border-color:var(--accent);}
 <div id="toast"></div>
 
 <script>
-const SQUAD=[
+// Hardcoded fallback squad — kept in sync with index.html SQUAD constant
+const SQUAD_FALLBACK=[
   {id:4, num:'#4', name:'Elara Jewell'},
   {id:6, num:'#6', name:'Grace Burslem'},
   {id:8, num:'#8', name:'Evie Davis'},
@@ -277,6 +278,20 @@ const SQUAD=[
   {id:23,num:'#23',name:"Zoe O'Connell"},
   {id:33,num:'#33',name:'Eva Leverton'}
 ];
+
+// Load live squad from index.html's localStorage if available (same device)
+// Falls back to hardcoded list if on a different device
+function loadSquad(){
+  try{
+    const mainState=JSON.parse(localStorage.getItem('wildcats_v10')||'{}');
+    if(mainState.players&&mainState.players.length>0){
+      return mainState.players.map(p=>({id:Number(p.id),num:p.num,name:p.name}));
+    }
+  }catch(e){}
+  return SQUAD_FALLBACK;
+}
+// SQUAD is resolved at runtime — always current
+let SQUAD=loadSquad();
 
 const FORMAT_PERIODS={
   'rep4x10':{count:4,label:'Q',name:'Rep 4×10'},
@@ -317,6 +332,7 @@ function save(){
 }
 
 function startSession(){
+  SQUAD=loadSquad();  // refresh from index.html localStorage in case squad changed
   const fmt=document.getElementById('format-sel').value;
   const f=FORMAT_PERIODS[fmt];
   periodCount=f.count;periodLabel=f.label;
