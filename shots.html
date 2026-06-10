@@ -134,10 +134,13 @@ select:focus,input:focus{border-color:var(--accent);}
     <div class="setup-sub">Choose the game format so the period buttons are correct. The squad is built in — just start logging.</div>
     <div class="field-label">Game format</div>
     <select id="format-sel">
-      <option value="rep4x10">Rep — 4 × 10 min quarters</option>
+      <option value="rep4x10">VJBL — 4 × 10 min quarters</option>
       <option value="dom2x20">Domestic — 2 × 20 min halves</option>
       <option value="dom2x18">Domestic — 2 × 18 min halves</option>
       <option value="dom2x15">Domestic — 2 × 15 min halves</option>
+      <option value="tour2x20">Tournament — 2 × 20 min halves</option>
+      <option value="tour2x18">Tournament — 2 × 18 min halves</option>
+      <option value="tour2x15">Tournament — 2 × 15 min halves</option>
     </select>
     <div class="field-label">Game label (optional)</div>
     <input type="text" id="game-label-input" placeholder="e.g. vs Heidelberg R11"/>
@@ -309,10 +312,13 @@ function loadSquad(){
 let SQUAD=loadSquad();
 
 const FORMAT_PERIODS={
-  'rep4x10':{count:4,label:'Q',name:'Rep 4×10'},
+  'rep4x10':{count:4,label:'Q',name:'VJBL 4×10'},
   'dom2x20':{count:2,label:'H',name:'Dom 2×20'},
   'dom2x18':{count:2,label:'H',name:'Dom 2×18'},
   'dom2x15':{count:2,label:'H',name:'Dom 2×15'},
+  'tour2x20':{count:2,label:'H',name:'Tour 2×20'},
+  'tour2x18':{count:2,label:'H',name:'Tour 2×18'},
+  'tour2x15':{count:2,label:'H',name:'Tour 2×15'},
 };
 
 let shots=[];
