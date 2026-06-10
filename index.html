@@ -430,7 +430,22 @@ table.stbl td:first-child{text-align:left;font-weight:500;}
         <button class="pts-btn away" onclick="addOppScore(2)">+2</button>
         <button class="pts-btn away" onclick="addOppScore(3)">+3</button>
       </div>
-      <div class="undo-score" onclick="undoOppScore()">↩ undo</div>
+      <div class="undo-score" onclick="undoOppScore()">↩ undo score</div>
+      <!-- Opponent rebounds -->
+      <div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border);">
+        <div style="font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.6px;margin-bottom:6px;">Opp Rebounds</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
+          <div>
+            <div style="font-size:10px;color:var(--muted);margin-bottom:3px;">OFF <span id="opp-reb-off-count" style="color:var(--text);font-weight:600;">0</span></div>
+            <button class="pts-btn away" style="font-size:12px;padding:7px 4px;" onclick="addOppReb('off')">+Off</button>
+          </div>
+          <div>
+            <div style="font-size:10px;color:var(--muted);margin-bottom:3px;">DEF <span id="opp-reb-def-count" style="color:var(--text);font-weight:600;">0</span></div>
+            <button class="pts-btn away" style="font-size:12px;padding:7px 4px;" onclick="addOppReb('def')">+Def</button>
+          </div>
+        </div>
+        <div class="undo-score" onclick="undoOppReb()" style="margin-top:4px;">↩ undo reb</div>
+      </div>
     </div>
   </div>
 
@@ -1028,6 +1043,7 @@ const TL_ICONS={
   sub_on:'⬆️', sub_off:'⬇️',
   timeout:'🟢', opp_timeout:'🔴',
   fga:'❌', ft_miss:'✕', ast:'👐', reb:'💪', stl:'✋', blk:'🚫', tov:'🔄', foul:'🟡',
+  opp_reb_off:'🔁', opp_reb_def:'🛡',
   qend:'🔔', start:'🏁'
 };
 const TL_CLASS={
@@ -1035,6 +1051,7 @@ const TL_CLASS={
   sub_on:'sub', sub_off:'sub',
   timeout:'timeout', opp_timeout:'timeout',
   fga:'stat', ft_miss:'stat', ast:'stat', reb:'stat', stl:'stat', blk:'stat', tov:'stat', foul:'foul',
+  opp_reb_off:'opp', opp_reb_def:'opp',
   qend:'system', start:'system'
 };
 
@@ -1294,6 +1311,10 @@ function renderScores(){
   const cg=state.currentGame;
   document.getElementById('score-home').textContent=cg?cg.scoreHome:0;
   document.getElementById('score-away').textContent=cg?cg.scoreAway:0;
+  const offEl=document.getElementById('opp-reb-off-count');
+  const defEl=document.getElementById('opp-reb-def-count');
+  if(offEl)offEl.textContent=cg?(cg.oppRebOff||0):0;
+  if(defEl)defEl.textContent=cg?(cg.oppRebDef||0):0;
 }
 
 function calcLivePlusMinus(){
@@ -1410,7 +1431,8 @@ function renderRosterTable(){
 /* ── TIMELINE ── */
 function populateTlSelector(){
   const sel=document.getElementById('tl-game-sel');
-  sel.innerHTML='';
+  const prev=sel.value;
+  sel.innerHTML='<option value="all">— All games —</option>';
   if(state.currentGame){
     const o=document.createElement('option');o.value='live';
     o.textContent='Current game — '+[state.currentGame.date,'vs '+state.currentGame.opponent].filter(Boolean).join(' ');
@@ -1421,28 +1443,61 @@ function populateTlSelector(){
     o.textContent=[g.date,g.time,'vs '+g.opponent].filter(Boolean).join(' ');
     sel.appendChild(o);
   });
-  if(!state.currentGame&&state.games.length>0)sel.value='0';
+  // Restore previous selection if valid, else default to current/first game
+  if(prev&&[...sel.options].some(o=>o.value===prev)){sel.value=prev;}
+  else if(state.currentGame){sel.value='live';}
+  else if(state.games.length>0){sel.value='0';}
+  else{sel.value='all';}
 }
 
 function renderTimeline(){
   const sel=document.getElementById('tl-game-sel');
   const val=sel?sel.value:'live';
-  const source=val==='live'?state.currentGame:state.games[parseInt(val)];
   const infoEl=document.getElementById('tl-game-info');
   const content=document.getElementById('tl-content');
 
+  // ── ALL GAMES view ──
+  if(val==='all'){
+    const allSources=[
+      ...(state.games||[]).slice().reverse(),
+      ...(state.currentGame?[state.currentGame]:[])
+    ];
+    if(!allSources.length){infoEl.textContent='';content.innerHTML='<div class="tl-empty">No games recorded yet</div>';return;}
+    infoEl.textContent=allSources.length+' game'+(allSources.length!==1?'s':'');
+    let html='';
+    allSources.forEach(source=>{
+      if(!source.timeline||!source.timeline.length)return;
+      const gLabel=[source.date,source.time,'vs '+(source.opponent||'?')].filter(Boolean).join(' · ');
+      const diff=(source.scoreHome||0)-(source.scoreAway||0);
+      const resultCol=diff>0?'var(--green)':diff<0?'var(--red)':'var(--muted)';
+      const resultStr=diff>0?'W':'L';
+      html+=`<div style="margin-bottom:18px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;padding-bottom:6px;border-bottom:2px solid var(--accent);">
+          <div style="font-size:13px;font-weight:700;color:var(--text);">${gLabel}</div>
+          <div style="font-size:12px;font-weight:700;color:${resultCol};">${source.scoreHome||0}–${source.scoreAway||0} ${diff!==0?resultStr:''}</div>
+        </div>
+        ${buildTimelineHtml(source)}
+      </div>`;
+    });
+    content.innerHTML=html||'<div class="tl-empty">No events recorded</div>';
+    return;
+  }
+
+  // ── SINGLE GAME view ──
+  const source=val==='live'?state.currentGame:state.games[parseInt(val)];
   if(!source){infoEl.textContent='No game selected';content.innerHTML='<div class="tl-empty">No game data</div>';return;}
   infoEl.textContent=[source.date,source.time,'vs '+source.opponent,source.venue].filter(Boolean).join(' · ');
-
   if(!source.timeline||source.timeline.length===0){content.innerHTML='<div class="tl-empty">No events recorded yet</div>';return;}
+  content.innerHTML=buildTimelineHtml(source);
+}
 
+function buildTimelineHtml(source){
   const quarters={};
   source.timeline.forEach(ev=>{
     const q='Q'+(ev.q||1);
     if(!quarters[q])quarters[q]=[];
     quarters[q].push(ev);
   });
-
   const oppName=source.opponent||'Opponent';
   const isDomTl=source.gameType==='domestic';
   const tlPeriodKeys=isDomTl?['Q1','Q2']:['Q1','Q2','Q3','Q4'];
@@ -1460,13 +1515,14 @@ function renderTimeline(){
       const isPts=ev.type==='pts_1'||ev.type==='pts_2'||ev.type==='pts_3'||ev.type==='pts';
       const scoreBadge=(isPts||ev.type==='opp_pts'||ev.type==='qend')?
         `<span class="tl-score-badge${ev.type==='opp_pts'?' opp':''}">${score}</span>`:'';
-
       switch(ev.type){
         case 'pts_1': title=ev.data.player+' — Free throw (+1)'; break;
         case 'pts_2': title=ev.data.player+' — Field goal (+2)'; break;
         case 'pts_3': title=ev.data.player+' — Three pointer (+3)'; break;
         case 'pts':   title=ev.data.player+' — '+ev.data.label; break;
         case 'opp_pts': title=oppName+' — +'+ev.data.pts+' pts'; break;
+        case 'opp_reb_off': title=oppName+' — Offensive rebound'; break;
+        case 'opp_reb_def': title=oppName+' — Defensive rebound'; break;
         case 'sub_on':  title='Sub on: '+ev.data.player; break;
         case 'sub_off': title='Sub off: '+ev.data.player; break;
         case 'timeout': title='Timeout — Eltham'; break;
@@ -1493,8 +1549,8 @@ function renderTimeline(){
       </div>`;
     });
     html+='</div>';
-    });
-  content.innerHTML=html;
+  });
+  return html;
 }
 
 /* ── EXPORT TIMELINE — opens new tab (iOS compatible) ── */
@@ -1522,14 +1578,14 @@ function startGame(){
     quarter:1,running:true,ended:false,timeout:false,timeoutTeam:'',
     elapsed:0,lastTick:Date.now(),qRemaining:periodSecs,
     onCourt:[...starters],stints:{},minutes:{},stats:{},
-    scoreHome:0,scoreAway:0,timeline:[]
+    scoreHome:0,scoreAway:0,oppRebOff:0,oppRebDef:0,timeline:[]
   };
   state.players.forEach(p=>{state.currentGame.minutes[p.id]=0;state.currentGame.stats[p.id]=emptyStats();});
   const now=Date.now();
   starters.forEach(pid=>{state.currentGame.stints[pid]=now;});
   const starterNames=starters.map(pid=>{const p=state.players.find(p=>p.id===pid);return p?p.name:'?';}).join(', ');
   addEvent('start',{label:'Starting 5: '+starterNames});
-  actionLog=[];oppScoreLog=[];selectedPid=null;
+  actionLog=[];oppScoreLog=[];oppRebLog=[];selectedPid=null;
   startTimer();save();
   showScreen('game',document.getElementById('tab-btn-game'));
   render();
@@ -1598,13 +1654,13 @@ function endGame(){
   const periodMins=(cg.periodSecs||600)/60;
   cg.totalGameMins=periodCount*periodMins;
   const pmFinal=calcLivePlusMinus();
-  const summary={minutes:{},stats:{},plusMinus:{}};
+  const summary={minutes:{},stats:{},plusMinus:{},oppRebOff:cg.oppRebOff||0,oppRebDef:cg.oppRebDef||0};
   state.players.forEach(p=>{summary.minutes[p.id]=cg.minutes[p.id]||0;summary.stats[p.id]={...cg.stats[p.id]};summary.plusMinus[p.id]=pmFinal[p.id]||0;});
   cg.summary=summary;
   const savedGame={...cg};
   state.games.push(savedGame);
   state.games.sort((a,b)=>parseDateStr(b.date)-parseDateStr(a.date));
-  state.currentGame=null;actionLog=[];oppScoreLog=[];selectedPid=null;pendingStarters=new Set();
+  state.currentGame=null;actionLog=[];oppScoreLog=[];oppRebLog=[];selectedPid=null;pendingStarters=new Set();
   save();render();renderStarterGrid();
   showScreen('season',document.getElementById('tab-btn-season'));
   // sync to Supabase
@@ -1698,6 +1754,30 @@ function undoOppScore(){
   const cg=state.currentGame;if(!cg||oppScoreLog.length===0)return;
   const last=oppScoreLog.pop();
   cg.scoreAway=Math.max(0,cg.scoreAway-last.pts);
+  if(cg.timeline&&last.tlEventId!=null){
+    const pos=cg.timeline.findIndex(e=>e.id===last.tlEventId);
+    if(pos!==-1)cg.timeline.splice(pos,1);
+  }
+  save();renderScores();
+}
+
+let oppRebLog=[];  // {type:'off'|'def', tlEventId}
+
+function addOppReb(type){
+  const cg=state.currentGame;if(!cg||cg.ended)return;
+  if(type==='off')cg.oppRebOff=(cg.oppRebOff||0)+1;
+  else cg.oppRebDef=(cg.oppRebDef||0)+1;
+  addEvent('opp_reb_'+type,{type});
+  const tlEventId=cg.timeline&&cg.timeline.length>0?cg.timeline[cg.timeline.length-1].id:null;
+  oppRebLog.push({type,tlEventId});
+  save();renderScores();
+}
+
+function undoOppReb(){
+  const cg=state.currentGame;if(!cg||oppRebLog.length===0)return;
+  const last=oppRebLog.pop();
+  if(last.type==='off')cg.oppRebOff=Math.max(0,(cg.oppRebOff||0)-1);
+  else cg.oppRebDef=Math.max(0,(cg.oppRebDef||0)-1);
   if(cg.timeline&&last.tlEventId!=null){
     const pos=cg.timeline.findIndex(e=>e.id===last.tlEventId);
     if(pos!==-1)cg.timeline.splice(pos,1);
@@ -2383,6 +2463,42 @@ function openGameReport(idx){
     <td style="color:#dc2626;">${totTov}</td><td style="color:#d97706;">${totFoul}</td><td>—</td>
   </tr>`;
 
+  // ── REBOUND CALLOUT ──
+  const oppRebOff=g.summary?g.summary.oppRebOff||0:(g.oppRebOff||0);
+  const oppRebDef=g.summary?g.summary.oppRebDef||0:(g.oppRebDef||0);
+  const oppRebTotal=oppRebOff+oppRebDef;
+  const ourReb=totReb;
+  const rebDiff=ourReb-oppRebTotal;
+  let rebCallout='';
+  if(oppRebTotal>0||ourReb>0){
+    const rebWinner=rebDiff>0?'Eltham':rebDiff<0?opp:'Tied';
+    const rebCol=rebDiff>0?'#1a5c35':rebDiff<0?'#7a1f1f':'#5c4a00';
+    const rebBg=rebDiff>0?'#e8f8ee':rebDiff<0?'#fce8e8':'#fff8e0';
+    // Second-chance points context
+    const oppOffRebNote=oppRebOff>0?`${opp} had <strong>${oppRebOff} offensive rebound${oppRebOff!==1?'s':''}</strong>, creating extra possessions off missed shots.`:'';
+    rebCallout=`<h2>Rebounding</h2>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:12px;">
+      <div style="text-align:center;background:#f8faff;border-radius:8px;padding:10px;">
+        <div style="font-size:11px;color:#666;font-weight:600;text-transform:uppercase;margin-bottom:4px;">Eltham</div>
+        <div style="font-size:28px;font-weight:800;color:${rebDiff>=0?'#16a34a':'#1a1a1a'};">${ourReb}</div>
+        <div style="font-size:11px;color:#888;">total reb</div>
+      </div>
+      <div style="text-align:center;background:#f8faff;border-radius:8px;padding:10px;">
+        <div style="font-size:11px;color:#666;font-weight:600;text-transform:uppercase;margin-bottom:4px;">${opp}</div>
+        <div style="font-size:28px;font-weight:800;color:${rebDiff<=0&&oppRebTotal>0?'#dc2626':'#1a1a1a'};">${oppRebTotal}</div>
+        <div style="font-size:11px;color:#888;">${oppRebOff} off · ${oppRebDef} def</div>
+      </div>
+      <div style="text-align:center;background:${rebBg};border-radius:8px;padding:10px;">
+        <div style="font-size:11px;color:#666;font-weight:600;text-transform:uppercase;margin-bottom:4px;">Margin</div>
+        <div style="font-size:28px;font-weight:800;color:${rebCol};">${rebDiff>0?'+':''}${rebDiff}</div>
+        <div style="font-size:11px;color:${rebCol};font-weight:600;">${rebWinner===('Tied')?'Tied':rebWinner+' +'+Math.abs(rebDiff)}</div>
+      </div>
+    </div>
+    ${oppRebOff>0?`<div style="background:#fff8f8;border-left:3px solid #dc2626;border-radius:4px;padding:8px 12px;font-size:12px;color:#444;margin-bottom:6px;">⚠ ${oppOffRebNote} Second-chance opportunities are a direct cost — each offensive rebound is a possession we didn't convert into a stop.</div>`:''}
+    ${rebDiff>=3?`<div style="background:#f0faf5;border-left:3px solid #16a34a;border-radius:4px;padding:8px 12px;font-size:12px;color:#444;">✓ Strong rebounding edge of +${rebDiff}. Controlling the glass was a significant factor in limiting ${opp}'s extra possessions.</div>`:''}
+    `;
+  }
+
   // ── QUARTER SCORE BREAKDOWN ──
   let qScoreHtml='';
   if(g.timeline&&g.timeline.length>0){
@@ -2649,6 +2765,8 @@ tfoot td{background:#f5f5f7;font-size:11px;border-top:2px solid #dde;border-bott
 </table>
 </div>
 <div class="note">${methodNote}</div>
+
+${rebCallout}
 
 ${qScoreHtml}
 
