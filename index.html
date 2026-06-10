@@ -311,7 +311,7 @@ table.stbl td:first-child{text-align:left;font-weight:500;}
       <div class="field-label">Game type</div>
       <div class="game-type-row">
         <button class="game-type-btn active" id="gt-rep" onclick="setGameType('rep')">
-          <div class="gt-title">Rep</div>
+          <div class="gt-title">VJBL</div>
           <div class="gt-sub">4 × 10 min</div>
         </button>
         <button class="game-type-btn" id="gt-domestic" onclick="setGameType('domestic')">
@@ -498,10 +498,16 @@ table.stbl td:first-child{text-align:left;font-weight:500;}
     <div style="font-size:12px;color:var(--muted);" id="wl-diff">—</div>
   </div>
   <!-- season view toggle -->
-  <div style="display:flex;gap:6px;margin-bottom:10px;">
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:10px;">
     <button class="btn" id="sv-results-btn" onclick="setSeasonView('results')" style="flex:1;">Results</button>
     <button class="btn" id="sv-stats-btn" onclick="setSeasonView('stats')" style="flex:1;">Player Stats</button>
     <button class="btn" id="sv-mins-btn" onclick="setSeasonView('mins')" style="flex:1;">Minutes</button>
+  </div>
+  <!-- game type filter — shown for Results and Stats views -->
+  <div id="season-type-filter" style="display:flex;gap:6px;margin-bottom:10px;">
+    <button class="btn sv-btn-active" id="stype-all" onclick="setSeasonType('all')" style="flex:1;font-size:12px;">All games</button>
+    <button class="btn" id="stype-rep" onclick="setSeasonType('rep')" style="flex:1;font-size:12px;">VJBL</button>
+    <button class="btn" id="stype-domestic" onclick="setSeasonType('domestic')" style="flex:1;font-size:12px;">Domestic</button>
   </div>
 
   <!-- RESULTS VIEW -->
@@ -529,7 +535,7 @@ table.stbl td:first-child{text-align:left;font-weight:500;}
     <!-- game-type filter tabs -->
     <div style="display:flex;gap:6px;margin-bottom:10px;">
       <button class="btn sv-btn-active" id="mins-filter-all" onclick="setMinsFilter('all')" style="flex:1;font-size:12px;">All games</button>
-      <button class="btn" id="mins-filter-rep" onclick="setMinsFilter('rep')" style="flex:1;font-size:12px;">Rep (4×10)</button>
+      <button class="btn" id="mins-filter-rep" onclick="setMinsFilter('rep')" style="flex:1;font-size:12px;">VJBL</button>
       <button class="btn" id="mins-filter-domestic" onclick="setMinsFilter('domestic')" style="flex:1;font-size:12px;">Domestic</button>
     </div>
     <div id="mins-sections"></div>
@@ -843,7 +849,7 @@ function setShotFilter(f){
 function populateScGameSel(){
   const sel=document.getElementById('sc-game-sel');if(!sel)return;
   const cur=sel.value;
-  sel.innerHTML='<option value="all">All games</option>';
+  sel.innerHTML='<option value="">— Select game —</option><option value="all">All games</option>';
   if(state.currentGame){
     const o=document.createElement('option');o.value=String(state.currentGame.id);
     o.textContent='Current — vs '+(state.currentGame.opponent||'?');
@@ -856,7 +862,9 @@ function populateScGameSel(){
     o.textContent=(g.date||'')+(g.round?' R'+g.round:'')+' vs '+(g.opponent||'?')+tag;
     sel.appendChild(o);
   });
-  if(cur)sel.value=cur;
+  // Restore previous if valid, else leave on prompt
+  if(cur&&[...sel.options].some(o=>o.value===cur)){sel.value=cur;}
+  else{sel.value='';}
 }
 
 function getShotsForGame(gameId){
@@ -868,7 +876,16 @@ function getShotsForGame(gameId){
 
 function renderShotChart(){
   populateScGameSel();
-  const gameId=document.getElementById('sc-game-sel')?.value||'all';
+  const gameId=document.getElementById('sc-game-sel')?.value||'';
+  // Show prompt if nothing selected
+  if(!gameId){
+    const dotsEl=document.getElementById('shot-dots');if(dotsEl)dotsEl.innerHTML='';
+    const statsEl=document.getElementById('sc-stats-row');if(statsEl)statsEl.innerHTML='';
+    const pillsEl=document.getElementById('sc-player-pills');if(pillsEl)pillsEl.innerHTML='';
+    const periodBar=document.getElementById('sc-period-bar');if(periodBar)periodBar.innerHTML='';
+    const zoneCard=document.getElementById('sc-zone-card');if(zoneCard)zoneCard.style.display='none';
+    return;
+  }
   let shots=[];
   if(gameId==='all'){
     const seen=new Set();
@@ -1003,7 +1020,7 @@ function setGameType(type){
   if(durField)durField.style.display=type==='domestic'?'':'none';
   // update sub labels
   const mins=parseInt(document.getElementById('g-period-mins')?.value)||20;
-  document.getElementById('gt-rep').querySelector('.gt-sub').textContent='4 × 10 min';
+  document.getElementById('gt-rep').querySelector('.gt-sub').textContent='VJBL';
   document.getElementById('gt-domestic').querySelector('.gt-sub').textContent='2 × '+mins+' min';
 }
 
@@ -1445,7 +1462,7 @@ function renderRosterTable(){
 function populateTlSelector(){
   const sel=document.getElementById('tl-game-sel');
   const prev=sel.value;
-  sel.innerHTML='<option value="all">— All games —</option>';
+  sel.innerHTML='<option value="">— Select game —</option><option value="all">All games</option>';
   if(state.currentGame){
     const o=document.createElement('option');o.value='live';
     o.textContent='Current game — '+[state.currentGame.date,'vs '+state.currentGame.opponent].filter(Boolean).join(' ');
@@ -1456,20 +1473,23 @@ function populateTlSelector(){
     o.textContent=[g.date,g.time,'vs '+g.opponent].filter(Boolean).join(' ');
     sel.appendChild(o);
   });
-  // Restore previous selection if valid, else default to current/first game
+  // Restore previous selection if valid; otherwise leave on prompt
   if(prev&&[...sel.options].some(o=>o.value===prev)){sel.value=prev;}
-  else if(state.currentGame){sel.value='live';}
-  else if(state.games.length>0){sel.value='0';}
-  else{sel.value='all';}
+  else{sel.value='';}
 }
 
 function renderTimeline(){
   const sel=document.getElementById('tl-game-sel');
-  const val=sel?sel.value:'live';
+  const val=sel?sel.value:'';
   const infoEl=document.getElementById('tl-game-info');
   const content=document.getElementById('tl-content');
 
-  // ── ALL GAMES view ──
+  // ── NOTHING SELECTED ──
+  if(!val){
+    infoEl.textContent='';
+    content.innerHTML='<div class="tl-empty">Select a game above to view its timeline</div>';
+    return;
+  }
   if(val==='all'){
     const allSources=[
       ...(state.games||[]).slice().reverse(),
@@ -1919,9 +1939,9 @@ function renderMinsSections(){
   if(currentMinsFilter==='all'||currentMinsFilter==='rep'){
     if(repGames.length>0){
       const repFair=(4*10*5)/state.players.length;
-      html+=buildMinsTable(repGames,'Rep — 4 × 10 min',repFair);
+      html+=buildMinsTable(repGames,'VJBL',repFair);
     } else if(currentMinsFilter==='rep'){
-      html='<div style="font-size:13px;color:var(--muted);padding:16px 0;">No rep games recorded</div>';
+      html='<div style="font-size:13px;color:var(--muted);padding:16px 0;">No VJBL games recorded</div>';
     }
   }
   if(currentMinsFilter==='all'||currentMinsFilter==='domestic'){
@@ -1942,14 +1962,15 @@ function renderMinsSections(){
 
 /* ── SEASON ── */
 function renderSeason(){
-  const games=state.games;
+  const games=getFilteredGames();
+  const allGames=state.games;
   const gc=document.getElementById('game-count');
   if(gc)gc.textContent=games.length;
 
-  // ── W/L RECORD ──
+  // ── W/L RECORD — filtered by current type ──
   const recBar=document.getElementById('season-record-bar');
   if(recBar){
-    if(games.length>0){
+    if(allGames.length>0){
       recBar.style.display='flex';
       let w=0,l=0,d=0,pf=0,pa=0;
       games.forEach(g=>{
@@ -1957,10 +1978,11 @@ function renderSeason(){
         pf+=(g.scoreHome||0);pa+=(g.scoreAway||0);
         if(diff>0)w++;else if(diff<0)l++;else d++;
       });
+      const typeLabel=currentSeasonType==='rep'?' (VJBL)':currentSeasonType==='domestic'?' (Domestic)':'';
       const recStr=d>0?`${w}W – ${l}L – ${d}D`:`${w}W – ${l}L`;
       const diffVal=pf-pa;const diffStr=(diffVal>=0?'+':'')+diffVal;
       const diffCol=diffVal>0?'var(--green)':diffVal<0?'var(--red)':'var(--muted)';
-      document.getElementById('wl-record').textContent=recStr;
+      document.getElementById('wl-record').textContent=recStr+typeLabel;
       document.getElementById('wl-scored').textContent=`${pf} pts for · ${pa} against`;
       document.getElementById('wl-diff').innerHTML=`Net <strong style="color:${diffCol};">${diffStr}</strong>`;
     } else {
@@ -1971,57 +1993,109 @@ function renderSeason(){
   // ── RESULTS VIEW ──
   const resList=document.getElementById('season-results-list');
   if(resList){
-    if(games.length===0){resList.innerHTML='<div style="font-size:13px;color:var(--muted);padding:16px 0;">No games yet</div>';}
-    else{
-      resList.innerHTML=games.map((g,idx)=>{
-        const diff=(g.scoreHome||0)-(g.scoreAway||0);
-        const oppWon=diff<0;const elthamWon=diff>0;
-        const marginText=diff===0?'Draw':((elthamWon?'Eltham':(g.opponent||'Opponent'))+' won by '+Math.abs(diff)+' point'+(Math.abs(diff)===1?'':'s'));
-        const roundLabel=g.round?'Round '+g.round:'Game';
-        const modeTag=g.gameType==='domestic'?' · Domestic':' · Rep';
-        const elthamScore=g.scoreHome||0;const oppScore=g.scoreAway||0;
-        return`<div class="round-block">
-          <div class="round-header">
-            <div class="round-header-title">${roundLabel}</div>
-            <div class="round-header-date">${g.date}${g.time?' · '+g.time:''}${modeTag}</div>
-          </div>
-          <div class="game-card" onclick="openGameDetail(${idx})">
-            <div class="game-card-teams">
-              <div class="game-card-names">
-                <div class="team-row">
-                  <div class="team-badge opp">${(g.opponent||'OPP').substring(0,3).toUpperCase()}</div>
-                  <span class="team-name opp">${g.opponent||'Opponent'}</span>
+    if(games.length===0){
+      resList.innerHTML='<div style="font-size:13px;color:var(--muted);padding:16px 0;">No '+(currentSeasonType==='all'?'':currentSeasonType+' ')+'games yet</div>';
+    } else {
+      function buildGameCards(gList){
+        return gList.map((g)=>{
+          // find real index in state.games for detail/edit links
+          const idx=state.games.indexOf(g);
+          const diff=(g.scoreHome||0)-(g.scoreAway||0);
+          const oppWon=diff<0;const elthamWon=diff>0;
+          const marginText=diff===0?'Draw':((elthamWon?'Eltham':(g.opponent||'Opponent'))+' won by '+Math.abs(diff)+' point'+(Math.abs(diff)===1?'':'s'));
+          const roundLabel=g.round?'Round '+g.round:'Game';
+          const modeTag=g.gameType==='domestic'?' · Domestic':' · Rep';
+          const elthamScore=g.scoreHome||0;const oppScore=g.scoreAway||0;
+          return`<div class="round-block">
+            <div class="round-header">
+              <div class="round-header-title">${roundLabel}</div>
+              <div class="round-header-date">${g.date}${g.time?' · '+g.time:''}${modeTag}</div>
+            </div>
+            <div class="game-card" onclick="openGameDetail(${idx})">
+              <div class="game-card-teams">
+                <div class="game-card-names">
+                  <div class="team-row">
+                    <div class="team-badge opp">${(g.opponent||'OPP').substring(0,3).toUpperCase()}</div>
+                    <span class="team-name opp">${g.opponent||'Opponent'}</span>
+                  </div>
+                  <div class="team-row">
+                    <div class="team-badge">ELT</div>
+                    <span class="team-name">Eltham U12 Girls 2</span>
+                  </div>
                 </div>
-                <div class="team-row">
-                  <div class="team-badge">ELT</div>
-                  <span class="team-name">Eltham U12 Girls 2</span>
+                <div class="game-card-scores">
+                  <div class="team-score${oppWon?' winner':''}">${oppScore}</div>
+                  <div class="score-divider">FINAL</div>
+                  <div class="team-score${elthamWon?' winner':''}">${elthamScore}</div>
                 </div>
               </div>
-              <div class="game-card-scores">
-                <div class="team-score${oppWon?' winner':''}">${oppScore}</div>
-                <div class="score-divider">FINAL</div>
-                <div class="team-score${elthamWon?' winner':''}">${elthamScore}</div>
+              <div class="game-card-meta">
+                ${g.venue?`<div class="meta-item">📍 ${g.venue}</div>`:''}
+              </div>
+              <div class="game-card-footer">
+                <div class="margin-text">${marginText}</div>
+                <div style="display:flex;gap:6px;align-items:center;">
+                  <span style="font-size:12px;color:var(--accent);">Stats & timeline →</span>
+                  <span class="gli-edit" onclick="event.stopPropagation();openEditModal(${idx})" style="border:1px solid var(--border2);border-radius:5px;padding:3px 8px;">Edit</span>
+                </div>
               </div>
             </div>
-            <div class="game-card-meta">
-              ${g.venue?`<div class="meta-item">📍 ${g.venue}</div>`:''}
-            </div>
-            <div class="game-card-footer">
-              <div class="margin-text">${marginText}</div>
-              <div style="display:flex;gap:6px;align-items:center;">
-                <span style="font-size:12px;color:var(--accent);">Stats & timeline →</span>
-                <span class="gli-edit" onclick="event.stopPropagation();openEditModal(${idx})" style="border:1px solid var(--border2);border-radius:5px;padding:3px 8px;">Edit</span>
-              </div>
-            </div>
-          </div>
-        </div>`;
-      }).join('');
+          </div>`;
+        }).join('');
+      }
+
+      if(currentSeasonType==='all'){
+        // Show VJBL and Domestic as separate sections
+        const repGames=games.filter(g=>g.gameType!=='domestic');
+        const domGames=games.filter(g=>g.gameType==='domestic');
+        let html='';
+        if(repGames.length){
+          html+=`<div style="font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:0.7px;margin-bottom:8px;margin-top:4px;">VJBL — ${repGames.length} game${repGames.length!==1?'s':''}</div>`;
+          html+=buildGameCards(repGames);
+        }
+        if(domGames.length){
+          // Group domestic by half length
+          const domGroups={};
+          domGames.forEach(g=>{
+            const halfLen=Math.round(getGameTotalMins(g)/2);
+            const key=halfLen;
+            if(!domGroups[key])domGroups[key]=[];
+            domGroups[key].push(g);
+          });
+          const domEntries=Object.entries(domGroups).sort((a,b)=>b[0]-a[0]);
+          domEntries.forEach(([halfLen,grp])=>{
+            const label=grp.length===domGames.length?`Domestic — ${grp.length} game${grp.length!==1?'s':''}`:`Domestic (2 × ${halfLen} min) — ${grp.length} game${grp.length!==1?'s':''}`;
+            html+=`<div style="font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:0.7px;margin-bottom:8px;margin-top:${repGames.length?'16px':'4px'};">${label}</div>`;
+            html+=buildGameCards(grp);
+          });
+        }
+        resList.innerHTML=html;
+      } else if(currentSeasonType==='domestic'){
+        // Group by half length
+        const domGroups={};
+        games.forEach(g=>{
+          const halfLen=Math.round(getGameTotalMins(g)/2);
+          if(!domGroups[halfLen])domGroups[halfLen]=[];
+          domGroups[halfLen].push(g);
+        });
+        const entries=Object.entries(domGroups).sort((a,b)=>b[0]-a[0]);
+        let html='';
+        entries.forEach(([halfLen,grp],i)=>{
+          if(entries.length>1){
+            html+=`<div style="font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:0.7px;margin-bottom:8px;margin-top:${i?'16px':'4px'};">2 × ${halfLen} min halves — ${grp.length} game${grp.length!==1?'s':''}</div>`;
+          }
+          html+=buildGameCards(grp);
+        });
+        resList.innerHTML=html;
+      } else {
+        resList.innerHTML=buildGameCards(games);
+      }
     }
   }
 
-  // ── STATS ──
+  // ── STATS — uses filtered games ──
   if(games.length===0){
-    document.getElementById('season-stats-body').innerHTML='<tr><td colspan="16" style="color:var(--muted);padding:12px 0;">No games yet</td></tr>';
+    document.getElementById('season-stats-body').innerHTML='<tr><td colspan="16" style="color:var(--muted);padding:12px 0;">No '+(currentSeasonType==='all'?'':currentSeasonType+' ')+'games yet</td></tr>';
     renderMinsSections();
     return;
   }
@@ -2285,6 +2359,24 @@ function applyTheme(){
 }
 
 // Season view toggle
+let currentSeasonType='all';  // 'all' | 'rep' | 'domestic'
+
+function setSeasonType(t){
+  currentSeasonType=t;
+  ['all','rep','domestic'].forEach(n=>{
+    const b=document.getElementById('stype-'+n);
+    if(b){b.className=n===t?'btn sv-btn-active':'btn';b.style.cssText='flex:1;font-size:12px;';}
+  });
+  renderSeason._statCache=null;  // invalidate cache so stats recompute
+  renderSeason();
+}
+
+function getFilteredGames(){
+  if(currentSeasonType==='all')return state.games;
+  if(currentSeasonType==='rep')return state.games.filter(g=>g.gameType!=='domestic');
+  return state.games.filter(g=>g.gameType==='domestic');
+}
+
 let currentSeasonView='results';
 function setSeasonView(v){
   currentSeasonView=v;
@@ -2295,6 +2387,9 @@ function setSeasonView(v){
     if(btn){btn.className=n===v?'btn sv-btn-active':'btn';}
   });
   document.getElementById('game-detail-panel').style.display='none';
+  // Type filter bar visible for Results and Stats; Minutes has its own
+  const typeFilter=document.getElementById('season-type-filter');
+  if(typeFilter)typeFilter.style.display=v==='mins'?'none':'flex';
 }
 
 function openGameDetail(idx){
