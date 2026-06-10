@@ -165,7 +165,7 @@ input:focus,select:focus{border-color:var(--accent);}
 .undo-score{font-size:11px;color:var(--muted);text-align:center;margin-top:6px;cursor:pointer;}
 .auto-tag{font-size:10px;color:var(--green);background:var(--green-bg);border-radius:4px;padding:2px 5px;margin-left:4px;}
 /* game type toggle */
-.game-type-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.game-type-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;}
 .game-type-btn{padding:12px 8px;border-radius:var(--rs);border:1px solid var(--border2);background:var(--surface2);color:var(--muted);cursor:pointer;font-family:'DM Sans',sans-serif;text-align:center;-webkit-user-select:none;transition:all 0.1s;}
 .game-type-btn.active{background:var(--accent);border-color:var(--accent);color:#fff;}
 .game-type-btn:active{transform:scale(0.97);}
@@ -318,13 +318,17 @@ table.stbl td:first-child{text-align:left;font-weight:500;}
           <div class="gt-title">Domestic</div>
           <div class="gt-sub">2 × 20 min</div>
         </button>
+        <button class="game-type-btn" id="gt-tournament" onclick="setGameType('tournament')">
+          <div class="gt-title">Tournament</div>
+          <div class="gt-sub">2 × 20 min</div>
+        </button>
       </div>
     </div>
     <!-- Domestic period length (hidden for rep) -->
     <div class="field" id="domestic-duration-field" style="display:none;">
       <div class="field-label">Period length (minutes)</div>
       <input type="number" id="g-period-mins" value="20" min="5" max="40"
-        oninput="document.getElementById('gt-domestic').querySelector('.gt-sub').textContent='2 × '+this.value+' min'"
+        oninput="document.getElementById('gt-domestic').querySelector('.gt-sub').textContent='2 × '+this.value+' min';document.getElementById('gt-tournament').querySelector('.gt-sub').textContent='2 × '+this.value+' min';"
         style="width:100%;background:var(--surface2);border:1px solid var(--border2);border-radius:var(--rs);color:var(--text);font-family:DM Sans,sans-serif;font-size:15px;padding:10px 12px;outline:none;-webkit-appearance:none;"/>
     </div>
     <div class="two-col">
@@ -508,6 +512,7 @@ table.stbl td:first-child{text-align:left;font-weight:500;}
     <button class="btn sv-btn-active" id="stype-all" onclick="setSeasonType('all')" style="flex:1;font-size:12px;">All games</button>
     <button class="btn" id="stype-rep" onclick="setSeasonType('rep')" style="flex:1;font-size:12px;">VJBL</button>
     <button class="btn" id="stype-domestic" onclick="setSeasonType('domestic')" style="flex:1;font-size:12px;">Domestic</button>
+    <button class="btn" id="stype-tournament" onclick="setSeasonType('tournament')" style="flex:1;font-size:12px;">Tournament</button>
   </div>
 
   <!-- RESULTS VIEW -->
@@ -1010,38 +1015,40 @@ function loadShotsFromGames(){
 
 const Q_SECS_REP=600;   // 10 min
 const Q_SECS_DOM_DEFAULT=1200; // 20 min
-let currentGameType='rep';  // 'rep' or 'domestic'
+let currentGameType='rep';  // 'rep' | 'domestic' | 'tournament'
+function isHalves(type){return type==='domestic'||type==='tournament';}
 
 function setGameType(type){
   currentGameType=type;
-  document.getElementById('gt-rep').classList.toggle('active',type==='rep');
-  document.getElementById('gt-domestic').classList.toggle('active',type==='domestic');
+  ['rep','domestic','tournament'].forEach(t=>{
+    const b=document.getElementById('gt-'+t);if(b)b.classList.toggle('active',t===type);
+  });
   const durField=document.getElementById('domestic-duration-field');
-  if(durField)durField.style.display=type==='domestic'?'':'none';
-  // update sub labels
+  if(durField)durField.style.display=isHalves(type)?'':'none';
   const mins=parseInt(document.getElementById('g-period-mins')?.value)||20;
   document.getElementById('gt-rep').querySelector('.gt-sub').textContent='VJBL';
   document.getElementById('gt-domestic').querySelector('.gt-sub').textContent='2 × '+mins+' min';
+  document.getElementById('gt-tournament').querySelector('.gt-sub').textContent='2 × '+mins+' min';
 }
 
 function getQSecs(){
-  if(currentGameType==='domestic'){
+  if(isHalves(currentGameType)){
     const mins=parseInt(document.getElementById('g-period-mins')?.value)||20;
     return mins*60;
   }
   return Q_SECS_REP;
 }
 
-function getPeriodCount(){return currentGameType==='domestic'?2:4;}
+function getPeriodCount(){return isHalves(currentGameType)?2:4;}
 
 function getPeriodLabel(n){
-  return currentGameType==='domestic'?'H'+n:'Q'+n;
+  return isHalves(currentGameType)?'H'+n:'Q'+n;
 }
 
 function renderPeriodBar(game){
   const bar=document.getElementById('period-bar');if(!bar)return;
-  const count=game?((game.gameType==='domestic')?2:4):4;
-  const isDom=game?game.gameType==='domestic':false;
+  const count=game?(isHalves(game.gameType)?2:4):4;
+  const isDom=game?isHalves(game.gameType):false;
   bar.innerHTML='';
   for(let i=1;i<=count;i++){
     const btn=document.createElement('button');
@@ -1247,7 +1254,7 @@ function getTimestamp(cg){
   const remaining=Math.max(0,Math.ceil(cg.qRemaining));
   const elapsed=Math.max(0,periodSecs-remaining);
   const m=Math.floor(elapsed/60);const s=elapsed%60;
-  const prefix=cg.gameType==='domestic'?'H':'Q';
+  const prefix=isHalves(cg.gameType)?'H':'Q';
   return prefix+cg.quarter+' '+m+':'+String(s).padStart(2,'0');
 }
 
@@ -1257,7 +1264,7 @@ function addEvent(type,data){
   const idx=cg.timeline.length;
   cg.timeline.push({
     id:Date.now()+idx,ts:getTimestamp(cg),q:cg.quarter,
-    isDom:cg.gameType==='domestic',
+    isDom:isHalves(cg.gameType),
     type,data,scoreHome:cg.scoreHome,scoreAway:cg.scoreAway
   });
   return idx;
@@ -1271,7 +1278,7 @@ function renderStatus(){
   const badge=document.getElementById('status-badge');
   const meta=document.getElementById('game-meta');
   if(!cg){badge.className='badge badge-idle';badge.textContent='Idle';if(meta)meta.textContent='—';return;}
-  const modeLabel=cg.gameType==='domestic'?'Domestic':'Rep';
+  const modeLabel=cg.gameType==='tournament'?'Tournament':cg.gameType==='domestic'?'Domestic':'VJBL';
   const parts=[cg.date,cg.time,'vs '+cg.opponent,cg.venue].filter(Boolean);
   if(meta)meta.innerHTML=parts.join(' · ')+'<span class="game-mode-badge">'+modeLabel+'</span>';
   if(cg.timeout){badge.className='badge badge-to';badge.textContent='Timeout';}
@@ -1532,7 +1539,7 @@ function buildTimelineHtml(source){
     quarters[q].push(ev);
   });
   const oppName=source.opponent||'Opponent';
-  const isDomTl=source.gameType==='domestic';
+  const isDomTl=isHalves(source.gameType);
   const tlPeriodKeys=isDomTl?['Q1','Q2']:['Q1','Q2','Q3','Q4'];
   const tlPeriodLabels=isDomTl?{'Q1':'H1','Q2':'H2'}:{'Q1':'Q1','Q2':'Q2','Q3':'Q3','Q4':'Q4'};
   let html='';
@@ -1717,7 +1724,7 @@ function endGame(){
   pauseInternal();
   cg.ended=true;cg.running=false;cg.timeout=false;cg.onCourt=[];
   // Store total possible minutes for fair-share calculations
-  const periodCount=cg.gameType==='domestic'?2:4;
+  const periodCount=isHalves(cg.gameType)?2:4;
   const periodMins=(cg.periodSecs||600)/60;
   cg.totalGameMins=periodCount*periodMins;
   const pmFinal=calcLivePlusMinus();
@@ -1865,7 +1872,7 @@ function fmtMins(m){return Math.floor(m)+':'+String(Math.floor((m-Math.floor(m))
 let currentMinsFilter='all';
 function setMinsFilter(f){
   currentMinsFilter=f;
-  ['all','rep','domestic'].forEach(n=>{
+  ['all','rep','domestic','tournament'].forEach(n=>{
     const btn=document.getElementById('mins-filter-'+n);
     if(btn){btn.className=n===f?'btn sv-btn-active':'btn';btn.style.fontSize='12px';}
   });
@@ -1874,8 +1881,8 @@ function setMinsFilter(f){
 
 function getGameTotalMins(g){
   if(g.totalGameMins)return g.totalGameMins;
-  const periodCount=g.gameType==='domestic'?2:4;
-  const periodMins=g.periodSecs?g.periodSecs/60:(g.gameType==='domestic'?20:10);
+  const periodCount=isHalves(g.gameType)?2:4;
+  const periodMins=g.periodSecs?g.periodSecs/60:(isHalves(g.gameType)?20:10);
   return periodCount*periodMins;
 }
 
@@ -1885,8 +1892,8 @@ function renderMinsSections(){
   const games=state.games;
   if(games.length===0){container.innerHTML='<div style="font-size:13px;color:var(--muted);padding:16px 0;">No games yet</div>';return;}
 
-  const repGames=games.filter(g=>g.gameType!=='domestic');
-  const domGames=games.filter(g=>g.gameType==='domestic');
+  const repGames=games.filter(g=>!isHalves(g.gameType));
+  const domGames=games.filter(g=>isHalves(g.gameType));
 
   // Group domestic games by half length (rounded to nearest minute)
   const domGroups={};
@@ -1978,7 +1985,7 @@ function renderSeason(){
         pf+=(g.scoreHome||0);pa+=(g.scoreAway||0);
         if(diff>0)w++;else if(diff<0)l++;else d++;
       });
-      const typeLabel=currentSeasonType==='rep'?' (VJBL)':currentSeasonType==='domestic'?' (Domestic)':'';
+      const typeLabel=currentSeasonType==='rep'?' (VJBL)':currentSeasonType==='domestic'?' (Domestic)':currentSeasonType==='tournament'?' (Tournament)':'';
       const recStr=d>0?`${w}W – ${l}L – ${d}D`:`${w}W – ${l}L`;
       const diffVal=pf-pa;const diffStr=(diffVal>=0?'+':'')+diffVal;
       const diffCol=diffVal>0?'var(--green)':diffVal<0?'var(--red)':'var(--muted)';
@@ -2004,7 +2011,7 @@ function renderSeason(){
           const oppWon=diff<0;const elthamWon=diff>0;
           const marginText=diff===0?'Draw':((elthamWon?'Eltham':(g.opponent||'Opponent'))+' won by '+Math.abs(diff)+' point'+(Math.abs(diff)===1?'':'s'));
           const roundLabel=g.round?'Round '+g.round:'Game';
-          const modeTag=g.gameType==='domestic'?' · Domestic':' · Rep';
+          const modeTag=g.gameType==='tournament'?' · Tournament':g.gameType==='domestic'?' · Domestic':' · VJBL';
           const elthamScore=g.scoreHome||0;const oppScore=g.scoreAway||0;
           return`<div class="round-block">
             <div class="round-header">
@@ -2046,17 +2053,19 @@ function renderSeason(){
 
       if(currentSeasonType==='all'){
         // Show VJBL and Domestic as separate sections
-        const repGames=games.filter(g=>g.gameType!=='domestic');
+        const repGames=games.filter(g=>!isHalves(g.gameType));
         const domGames=games.filter(g=>g.gameType==='domestic');
         let html='';
         if(repGames.length){
           html+=`<div style="font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:0.7px;margin-bottom:8px;margin-top:4px;">VJBL — ${repGames.length} game${repGames.length!==1?'s':''}</div>`;
           html+=buildGameCards(repGames);
         }
-        if(domGames.length){
+        const tourneyGames=games.filter(g=>g.gameType==='tournament');
+        const puredomGames=games.filter(g=>g.gameType==='domestic');
+        if(puredomGames.length){
           // Group domestic by half length
           const domGroups={};
-          domGames.forEach(g=>{
+          puredomGames.forEach(g=>{
             const halfLen=Math.round(getGameTotalMins(g)/2);
             const key=halfLen;
             if(!domGroups[key])domGroups[key]=[];
@@ -2064,14 +2073,18 @@ function renderSeason(){
           });
           const domEntries=Object.entries(domGroups).sort((a,b)=>b[0]-a[0]);
           domEntries.forEach(([halfLen,grp])=>{
-            const label=grp.length===domGames.length?`Domestic — ${grp.length} game${grp.length!==1?'s':''}`:`Domestic (2 × ${halfLen} min) — ${grp.length} game${grp.length!==1?'s':''}`;
+            const label=grp.length===puredomGames.length?`Domestic — ${grp.length} game${grp.length!==1?'s':''}`:`Domestic (2 × ${halfLen} min) — ${grp.length} game${grp.length!==1?'s':''}`;
             html+=`<div style="font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:0.7px;margin-bottom:8px;margin-top:${repGames.length?'16px':'4px'};">${label}</div>`;
             html+=buildGameCards(grp);
           });
         }
+        if(tourneyGames.length){
+          html+=`<div style="font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:0.7px;margin-bottom:8px;margin-top:16px;">Tournament — ${tourneyGames.length} game${tourneyGames.length!==1?'s':''}</div>`;
+          html+=buildGameCards(tourneyGames);
+        }
         resList.innerHTML=html;
       } else if(currentSeasonType==='domestic'){
-        // Group by half length
+        // Group domestic by half length
         const domGroups={};
         games.forEach(g=>{
           const halfLen=Math.round(getGameTotalMins(g)/2);
@@ -2082,6 +2095,23 @@ function renderSeason(){
         let html='';
         entries.forEach(([halfLen,grp],i)=>{
           if(entries.length>1){
+            html+=`<div style="font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:0.7px;margin-bottom:8px;margin-top:${i?'16px':'4px'};">2 × ${halfLen} min halves — ${grp.length} game${grp.length!==1?'s':''}</div>`;
+          }
+          html+=buildGameCards(grp);
+        });
+        resList.innerHTML=html;
+      } else if(currentSeasonType==='tournament'){
+        // Tournament games — group by half length too
+        const tGroups={};
+        games.forEach(g=>{
+          const halfLen=Math.round(getGameTotalMins(g)/2);
+          if(!tGroups[halfLen])tGroups[halfLen]=[];
+          tGroups[halfLen].push(g);
+        });
+        const tEntries=Object.entries(tGroups).sort((a,b)=>b[0]-a[0]);
+        let html='';
+        tEntries.forEach(([halfLen,grp],i)=>{
+          if(tEntries.length>1){
             html+=`<div style="font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:0.7px;margin-bottom:8px;margin-top:${i?'16px':'4px'};">2 × ${halfLen} min halves — ${grp.length} game${grp.length!==1?'s':''}</div>`;
           }
           html+=buildGameCards(grp);
@@ -2176,7 +2206,16 @@ function openEditModal(idx){
       <div><div class="field-label">Date</div><input type="text" id="edit-date" value="${g.date||''}"/></div>
       <div><div class="field-label">Time</div><input type="text" id="edit-time" value="${g.time||''}"/></div>
     </div>
-    <div><div class="field-label">Venue</div><input type="text" id="edit-venue" value="${g.venue||''}"/></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">
+      <div><div class="field-label">Venue</div><input type="text" id="edit-venue" value="${g.venue||''}"/></div>
+      <div><div class="field-label">Game type</div>
+        <select id="edit-game-type" style="width:100%;background:var(--surface2);border:1px solid var(--border2);border-radius:var(--rs);color:var(--text);font-family:'DM Sans',sans-serif;font-size:13px;padding:9px 10px;outline:none;-webkit-appearance:none;">
+          <option value="rep"${g.gameType==='rep'||!g.gameType?' selected':''}>VJBL</option>
+          <option value="domestic"${g.gameType==='domestic'?' selected':''}>Domestic</option>
+          <option value="tournament"${g.gameType==='tournament'?' selected':''}>Tournament</option>
+        </select>
+      </div>
+    </div>
   </div>
   <div style="overflow-x:auto;"><table class="edit-tbl">
     <thead><tr><th>Player</th><th>MIN</th><th>PTS</th><th>FTM</th><th>FTA</th><th>FGM</th><th>FGA</th><th>AST</th><th>REB</th><th>STL</th><th>BLK</th><th>TO</th><th>FL</th></tr></thead><tbody>`;
@@ -2219,6 +2258,8 @@ function saveEditModal(){
   if(date!==undefined)g.date=date;
   if(time!==undefined)g.time=time;
   if(venue!==undefined)g.venue=venue;
+  const gameTypeEl=document.getElementById('edit-game-type');
+  if(gameTypeEl)g.gameType=gameTypeEl.value;
   // Save player stats
   document.querySelectorAll('#edit-modal-body .edit-input').forEach(input=>{
     const pid=parseInt(input.dataset.pid);const field=input.dataset.field;const val=parseInt(input.value)||0;
@@ -2288,7 +2329,7 @@ function exportCSV(){
         g.round?'R'+g.round:'',
         '"'+(g.opponent||'').replace(/"/g,'""')+'"',
         '"'+(g.venue||'').replace(/"/g,'""')+'"',
-        g.gameType==='domestic'?'Domestic':'Rep',
+        g.gameType==='tournament'?'Tournament':g.gameType==='domestic'?'Domestic':'VJBL',
         result,
         g.scoreHome||0,
         g.scoreAway||0,
@@ -2359,11 +2400,11 @@ function applyTheme(){
 }
 
 // Season view toggle
-let currentSeasonType='all';  // 'all' | 'rep' | 'domestic'
+let currentSeasonType='all';  // 'all' | 'rep' | 'domestic' | 'tournament'
 
 function setSeasonType(t){
   currentSeasonType=t;
-  ['all','rep','domestic'].forEach(n=>{
+  ['all','rep','domestic','tournament'].forEach(n=>{
     const b=document.getElementById('stype-'+n);
     if(b){b.className=n===t?'btn sv-btn-active':'btn';b.style.cssText='flex:1;font-size:12px;';}
   });
@@ -2373,7 +2414,8 @@ function setSeasonType(t){
 
 function getFilteredGames(){
   if(currentSeasonType==='all')return state.games;
-  if(currentSeasonType==='rep')return state.games.filter(g=>g.gameType!=='domestic');
+  if(currentSeasonType==='rep')return state.games.filter(g=>!isHalves(g.gameType));
+  if(currentSeasonType==='tournament')return state.games.filter(g=>g.gameType==='tournament');
   return state.games.filter(g=>g.gameType==='domestic');
 }
 
@@ -2467,7 +2509,7 @@ function openGameDetail(idx){
     const quarters={};
     g.timeline.forEach(ev=>{const q='Q'+(ev.q||1);if(!quarters[q])quarters[q]=[];quarters[q].push(ev);});
     const oppName=g.opponent||'Opponent';
-    const isDomGame=g.gameType==='domestic';
+    const isDomGame=isHalves(g.gameType);
     const periodKeys=isDomGame?['Q1','Q2']:['Q1','Q2','Q3','Q4'];
     const periodDisplay=isDomGame?{'Q1':'H1','Q2':'H2'}:{'Q1':'Q1','Q2':'Q2','Q3':'Q3','Q4':'Q4'};
     periodKeys.forEach(q=>{
@@ -2562,7 +2604,7 @@ function openGameReport(idx){
   const resultStr=(diff>0?'W':diff<0?'L':'D')+' '+g.scoreHome+' – '+g.scoreAway;
   const resultColor=diff>0?'#1a5c35':diff<0?'#7a1f1f':'#5c4a00';
   const resultBg=diff>0?'#e8f8ee':diff<0?'#fce8e8':'#fff8e0';
-  const isDom=g.gameType==='domestic';
+  const isDom=isHalves(g.gameType);
   const periodCount=isDom?2:4;
   const periodLabel=isDom?'H':'Q';
   const roundLabel=g.round?'Round '+g.round:'Game';
