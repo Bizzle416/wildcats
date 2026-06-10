@@ -1058,8 +1058,8 @@ const TL_CLASS={
 let state={players:[],games:[],currentGame:null};
 let timerInterval=null;
 let wakeLock=null;
-let actionLog=[];    // {pid, type, pts, tlIdx}
-let oppScoreLog=[];  // {pts, tlIdx}
+let actionLog=[];    // {pid, type, pts, tlEventId}
+let oppScoreLog=[];  // {pts, tlEventId}
 let selectedPid=null;
 let editingGameIdx=null;
 let pendingStarters=new Set();
@@ -1992,6 +1992,8 @@ function renderSeason(){
       });
     }
   });
+  // Cache so setStatsView can re-render table without re-running full season
+  renderSeason._statCache={totStats,gpCount,totPm};
   renderSeasonStatsTable(totStats,gpCount,totPm);
   renderMinsSections();
 }
@@ -2004,8 +2006,10 @@ function setStatsView(v){
     if(b)b.className=n===v?'btn sv-btn-active':'btn';
     if(b)b.style.cssText='font-size:11px;padding:5px 10px;';
   });
-  // Re-render with current data
-  renderSeason();
+  // Use cached data if available — avoids full season re-render on every toggle
+  const cache=renderSeason._statCache;
+  if(cache){renderSeasonStatsTable(cache.totStats,cache.gpCount,cache.totPm);}
+  else{renderSeason();}
 }
 
 function renderSeasonStatsTable(totStats,gpCount,totPm){
@@ -2139,18 +2143,25 @@ function exportCSV(){
   if(games.length===0){showSyncBadge('No games to export');return;}
   const sorted=[...state.players].sort((a,b)=>a.id-b.id);
   const rows=[];
-  // header
+  // header — team-level opp reb only on first player row per game
   rows.push(['Date','Round','Opposition','Venue','Game Type','Result','Eltham Score','Opp Score',
+    'Opp Reb Off','Opp Reb Def','Opp Reb Total',
     'Player','#','MIN (decimal)','PTS','FTM','FTA','FT%','FGM','FGA','FG%','AST','REB','STL','BLK','TO','FL'].join(','));
   games.forEach(g=>{
     const diff=(g.scoreHome||0)-(g.scoreAway||0);
     const result=diff>0?'W':diff<0?'L':'D';
-    sorted.forEach(p=>{
+    const oppRebOff=g.summary?g.summary.oppRebOff||0:(g.oppRebOff||0);
+    const oppRebDef=g.summary?g.summary.oppRebDef||0:(g.oppRebDef||0);
+    sorted.forEach((p,pi)=>{
       const m=g.summary?g.summary.minutes[p.id]||0:0;
       const s=g.summary&&g.summary.stats?g.summary.stats[p.id]||emptyStats():emptyStats();
       const fg=s.fga>0?Math.round(s.fgm/s.fga*100)+'%':'';
       const ft=s.fta>0?Math.round((s.ftm||0)/s.fta*100)+'%':'';
       const minsStr=(Math.round(m*10)/10).toFixed(1);
+      // Opp reb only on first player row per game (team stat, not per-player)
+      const rebOff=pi===0?oppRebOff:'';
+      const rebDef=pi===0?oppRebDef:'';
+      const rebTot=pi===0?(oppRebOff+oppRebDef):'';
       rows.push([
         g.date||'',
         g.round?'R'+g.round:'',
@@ -2160,6 +2171,7 @@ function exportCSV(){
         result,
         g.scoreHome||0,
         g.scoreAway||0,
+        rebOff,rebDef,rebTot,
         '"'+p.name.replace(/"/g,'""')+'"',
         p.num,
         minsStr,
@@ -2266,7 +2278,35 @@ function openGameDetail(idx){
     </div>
     <div style="text-align:center;font-size:12px;color:var(--muted);font-style:italic;">${marginText}</div>
   </div>`;
-  // player stats table
+
+  // Opponent rebounds row (if tracked)
+  const oppRebOff=g.summary?g.summary.oppRebOff||0:(g.oppRebOff||0);
+  const oppRebDef=g.summary?g.summary.oppRebDef||0:(g.oppRebDef||0);
+  const oppRebTotal=oppRebOff+oppRebDef;
+  const totOurReb=sorted.reduce((a,p)=>{const s=g.summary&&g.summary.stats?g.summary.stats[p.id]:null;return a+(s?s.reb||0:0);},0);
+  if(oppRebTotal>0||totOurReb>0){
+    const rebDiff=totOurReb-oppRebTotal;
+    const rebCol=rebDiff>0?'var(--green)':rebDiff<0?'var(--red)':'var(--muted)';
+    html+=`<div class="card" style="margin-bottom:10px;padding:10px 14px;">
+      <div class="sec-label" style="margin-bottom:8px;">Rebounding</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;text-align:center;">
+        <div style="background:var(--surface2);border-radius:var(--rs);padding:8px 4px;">
+          <div style="font-size:10px;color:var(--muted);font-weight:600;margin-bottom:2px;">Eltham</div>
+          <div style="font-size:22px;font-weight:700;color:${rebDiff>=0?'var(--green)':'var(--text)'};">${totOurReb}</div>
+        </div>
+        <div style="background:var(--surface2);border-radius:var(--rs);padding:8px 4px;">
+          <div style="font-size:10px;color:var(--muted);font-weight:600;margin-bottom:2px;">${g.opponent||'Opp'}</div>
+          <div style="font-size:22px;font-weight:700;color:${rebDiff<0?'var(--red)':'var(--text)'};">${oppRebTotal}</div>
+          <div style="font-size:10px;color:var(--muted);">${oppRebOff}off · ${oppRebDef}def</div>
+        </div>
+        <div style="background:var(--surface2);border-radius:var(--rs);padding:8px 4px;">
+          <div style="font-size:10px;color:var(--muted);font-weight:600;margin-bottom:2px;">Margin</div>
+          <div style="font-size:22px;font-weight:700;color:${rebCol};">${rebDiff>0?'+':''}${rebDiff}</div>
+        </div>
+      </div>
+      ${oppRebOff>0?`<div style="font-size:11px;color:var(--red);margin-top:6px;">⚠ ${g.opponent||'Opp'} had ${oppRebOff} offensive rebound${oppRebOff!==1?'s':''}</div>`:''}
+    </div>`;
+  }
   html+=`<div class="card" style="padding:10px 0;margin-bottom:10px;"><div class="sec-label" style="padding:0 14px 8px;">Player stats</div><div style="overflow-x:auto;"><table class="rtbl"><thead><tr><th>Player</th><th>MIN</th><th>+/−</th><th>PTS</th><th>FTM</th><th>FTA</th><th>FT%</th><th>FGM</th><th>FGA</th><th>FG%</th><th>AST</th><th>REB</th><th>STL</th><th>BLK</th><th>TO</th><th>FL</th></tr></thead><tbody>`;
   sorted.forEach(p=>{
     const m=g.summary?g.summary.minutes[p.id]||0:0;
