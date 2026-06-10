@@ -1728,8 +1728,9 @@ function logAction(type){
   else if(type==='tov'){s.tov++;addEvent('tov',{player:pname});}
   else if(type==='foul'){s.foul++;addEvent('foul',{player:pname});}
 
-  const tlIdx=cg.timeline.length-1;
-  actionLog.push({pid:selectedPid,type,pts,tlIdx});
+  // Store the event's unique ID (not index) so undo is always correct
+  const tlEventId=cg.timeline&&cg.timeline.length>0?cg.timeline[cg.timeline.length-1].id:null;
+  actionLog.push({pid:selectedPid,type,pts,tlEventId});
   document.getElementById('last-action').textContent=pname+' — '+labels[type];
   save();renderRosterTable();renderScores();
 }
@@ -1746,9 +1747,10 @@ function undoAction(){
   } else if(last.type==='ft_miss'){if(s.fta>0)s.fta--;}
   else if(last.type==='fga'){if(s.fga>0)s.fga--;}
   else{if(s[last.type]!==undefined&&s[last.type]>0)s[last.type]--;}
-  // Remove specific timeline event by index
-  if(cg.timeline&&last.tlIdx!==undefined&&cg.timeline[last.tlIdx]){
-    cg.timeline.splice(last.tlIdx,1);
+  // Remove timeline event by its unique ID — immune to index shifting
+  if(cg.timeline&&last.tlEventId!=null){
+    const pos=cg.timeline.findIndex(e=>e.id===last.tlEventId);
+    if(pos!==-1)cg.timeline.splice(pos,1);
   }
   document.getElementById('last-action').textContent='Last action undone.';
   save();renderRosterTable();renderScores();
@@ -1757,9 +1759,9 @@ function undoAction(){
 function addOppScore(pts){
   const cg=state.currentGame;if(!cg||cg.ended)return;
   cg.scoreAway+=pts;
-  const tlIdx=cg.timeline?cg.timeline.length:0;
   addEvent('opp_pts',{pts});
-  oppScoreLog.push({pts,tlIdx});
+  const tlEventId=cg.timeline&&cg.timeline.length>0?cg.timeline[cg.timeline.length-1].id:null;
+  oppScoreLog.push({pts,tlEventId});
   save();renderScores();
 }
 
@@ -1767,8 +1769,9 @@ function undoOppScore(){
   const cg=state.currentGame;if(!cg||oppScoreLog.length===0)return;
   const last=oppScoreLog.pop();
   cg.scoreAway=Math.max(0,cg.scoreAway-last.pts);
-  if(cg.timeline&&last.tlIdx!==undefined&&cg.timeline[last.tlIdx]){
-    cg.timeline.splice(last.tlIdx,1);
+  if(cg.timeline&&last.tlEventId!=null){
+    const pos=cg.timeline.findIndex(e=>e.id===last.tlEventId);
+    if(pos!==-1)cg.timeline.splice(pos,1);
   }
   save();renderScores();
 }
@@ -2159,7 +2162,6 @@ function openGameDetail(idx){
       <div style="font-size:13px;color:var(--muted);">${g.date}${g.time?' · '+g.time:''}${g.venue?' · '+g.venue:''}</div>
       <div style="display:flex;gap:6px;">
         <button class="btn btn-primary" style="padding:5px 10px;font-size:12px;" onclick="openGameReport(${idx})">📄 Report</button>
-        <button class="btn" style="padding:5px 10px;font-size:12px;" onclick="exportTimelineForGame(${idx})">⬇ Export</button>
       </div>
     </div>
     <div style="display:flex;align-items:center;justify-content:center;gap:20px;padding:12px 0;">
