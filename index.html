@@ -494,7 +494,7 @@ table.stbl td:first-child{text-align:left;font-weight:500;}
 <!-- ═══ SEASON ═══ -->
 <div id="screen-season" class="screen">
   <!-- W/L record summary -->
-  <div id="season-record-bar" style="display:none;background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:10px 14px;margin-bottom:10px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;box-shadow:0 1px 3px rgba(0,0,0,0.04);">
+  <div id="season-record-bar" style="display:none;background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:10px 14px;margin-bottom:10px;align-items:center;gap:12px;flex-wrap:wrap;box-shadow:0 1px 3px rgba(0,0,0,0.04);">
     <div style="font-size:13px;font-weight:700;color:var(--text);" id="wl-record">—</div>
     <div style="width:1px;height:20px;background:var(--border2);"></div>
     <div style="font-size:12px;color:var(--muted);" id="wl-scored">—</div>
@@ -774,21 +774,30 @@ function importShotsFile(e){
       const data=JSON.parse(ev.target.result);
       const shots=Array.isArray(data)?data:(data.shots||[]);
       if(!shots.length){showSyncBadge('⚠ No shots found in file');return;}
+      // Use the import game selector to stamp the correct game_id
+      const sel=document.getElementById('import-game-sel');
+      const targetGameId=sel?sel.value:'';
+      if(!targetGameId){showSyncBadge('⚠ Select a game first before importing file');return;}
       let imported=0;
       shots.forEach(s=>{
-        const gid=String(s.game_id||s.gameId||'unknown');
-        if(!shotCache[gid])shotCache[gid]=[];
-        if(!shotCache[gid].find(x=>x.id===s.id)){shotCache[gid].push(s);imported++;}
-      });
-      // Persist into matching game objects
-      shots.forEach(s=>{
-        const gid=String(s.game_id||s.gameId||'');
-        const g=state.games.find(g=>String(g.id)===gid);
-        if(g){if(!g.shots)g.shots=[];if(!g.shots.find(x=>x.id===s.id))g.shots.push(s);}
+        const shot={...s,game_id:targetGameId};
+        if(!shotCache[targetGameId])shotCache[targetGameId]=[];
+        if(!shotCache[targetGameId].find(x=>x.id===shot.id)){shotCache[targetGameId].push(shot);imported++;}
+        // Persist into matching game object
+        const g=state.games.find(g=>String(g.id)===targetGameId);
+        if(g){if(!g.shots)g.shots=[];if(!g.shots.find(x=>x.id===shot.id))g.shots.push(shot);}
+        // Also current game
+        if(state.currentGame&&String(state.currentGame.id)===targetGameId){
+          if(!state.currentGame.shots)state.currentGame.shots=[];
+          if(!state.currentGame.shots.find(x=>x.id===shot.id))state.currentGame.shots.push(shot);
+        }
       });
       save();
-      showSyncBadge('✓ '+imported+' shots imported');
+      const gameName=sel&&sel.options[sel.selectedIndex]?sel.options[sel.selectedIndex].text:'game';
+      showSyncBadge('✓ '+imported+' shots imported → '+gameName);
       populateScGameSel();renderShotChart();
+      const scSel=document.getElementById('sc-game-sel');
+      if(scSel){scSel.value=targetGameId;renderShotChart();}
     }catch(err){showSyncBadge('⚠ Invalid shots file');}
   };
   reader.readAsText(file);
@@ -1101,8 +1110,10 @@ const TL_CLASS={
 let state={players:[],games:[],currentGame:null};
 let timerInterval=null;
 let wakeLock=null;
+let wakeLockListenerAdded=false;
 let actionLog=[];    // {pid, type, pts, tlEventId}
 let oppScoreLog=[];  // {pts, tlEventId}
+let oppRebLog=[];    // {type:'off'|'def', tlEventId}
 let selectedPid=null;
 let editingGameIdx=null;
 let pendingStarters=new Set();
@@ -1185,11 +1196,14 @@ function load(){
 async function requestWakeLock(){
   try{if('wakeLock' in navigator){
     wakeLock=await navigator.wakeLock.request('screen');
-    document.addEventListener('visibilitychange',async()=>{
-      if(document.visibilityState==='visible'&&state.currentGame&&state.currentGame.running){
-        try{wakeLock=await navigator.wakeLock.request('screen');}catch(e){}
-      }
-    });
+    if(!wakeLockListenerAdded){
+      wakeLockListenerAdded=true;
+      document.addEventListener('visibilitychange',async()=>{
+        if(document.visibilityState==='visible'&&state.currentGame&&state.currentGame.running){
+          try{wakeLock=await navigator.wakeLock.request('screen');}catch(e){}
+        }
+      });
+    }
   }}catch(e){}
 }
 
@@ -1362,14 +1376,18 @@ function renderScores(){
 }
 
 function calcLivePlusMinus(){
-  // Returns map pid -> +/- based on score snapshots in stints
   const cg=state.currentGame;if(!cg)return{};
   const pm={};
   state.players.forEach(p=>{pm[p.id]=0;});
-  // Walk timeline for sub_on/sub_off events + track score
-  // Also handle currently-on players vs current score
   const timeline=cg.timeline||[];
-  const onAt={};  // pid -> {sh,sa} when they came on
+  const onAt={};
+  // Helper: resolve player ID from event data — prefer stored pid, fall back to name
+  function resolveId(evData){
+    if(evData&&evData.pid!=null)return evData.pid;
+    const name=evData&&evData.player?evData.player:'';
+    const p=state.players.find(p=>p.name===name);
+    return p?p.id:null;
+  }
   // Seed starters from the start event
   for(const ev of timeline){
     if(ev.type==='start'){
@@ -1386,15 +1404,14 @@ function calcLivePlusMinus(){
   }
   for(const ev of timeline){
     const sh=ev.scoreHome||0;const sa=ev.scoreAway||0;
-    const pname=ev.data&&ev.data.player?ev.data.player:'';
     if(ev.type==='sub_on'){
-      const p=state.players.find(p=>p.name===pname);
-      if(p)onAt[p.id]={sh,sa};
+      const pid=resolveId(ev.data);
+      if(pid!=null)onAt[pid]={sh,sa};
     } else if(ev.type==='sub_off'){
-      const p=state.players.find(p=>p.name===pname);
-      if(p&&onAt[p.id]!==undefined){
-        pm[p.id]+=(sh-onAt[p.id].sh)-(sa-onAt[p.id].sa);
-        delete onAt[p.id];
+      const pid=resolveId(ev.data);
+      if(pid!=null&&onAt[pid]!==undefined){
+        pm[pid]+=(sh-onAt[pid].sh)-(sa-onAt[pid].sa);
+        delete onAt[pid];
       }
     }
   }
@@ -1402,8 +1419,7 @@ function calcLivePlusMinus(){
   const curSh=cg.scoreHome||0;const curSa=cg.scoreAway||0;
   Object.keys(onAt).forEach(pid=>{
     const pidNum=parseInt(pid);
-    const snap=onAt[pidNum];
-    pm[pidNum]=(pm[pidNum]||0)+(curSh-snap.sh)-(curSa-snap.sa);
+    pm[pidNum]=(pm[pidNum]||0)+(curSh-onAt[pidNum].sh)-(curSa-onAt[pidNum].sa);
   });
   return pm;
 }
@@ -1721,7 +1737,16 @@ function confirmSetClock(){
 function setQuarter(q){
   const cg=state.currentGame;if(!cg)return;
   if(q>cg.quarter){addEvent('qend',{});}
+  // Flush accumulated minutes for all on-court players before resetting the clock
+  // Prevents double-counting when manually advancing quarters
+  const wasRunning=cg.running;
+  if(wasRunning)pauseInternal();
   cg.quarter=q;cg.qRemaining=cg.periodSecs||Q_SECS_REP;
+  if(wasRunning){
+    cg.running=true;cg.lastTick=Date.now();
+    cg.onCourt.forEach(pid=>{cg.stints[pid]=Date.now();});
+    startTimer();
+  }
   save();renderStatus();renderTimer();renderPeriodBar(cg);
 }
 
@@ -1760,11 +1785,11 @@ function togglePlayer(pid){
     cg.onCourt.splice(idx,1);
     if(cg.running&&cg.stints[pid]){cg.minutes[pid]=(cg.minutes[pid]||0)+(now-cg.stints[pid])/60000;delete cg.stints[pid];}
     if(selectedPid===pid)selectedPid=null;
-    addEvent('sub_off',{player:p?p.name:'?'});
+    addEvent('sub_off',{player:p?p.name:'?',pid:pid});
   } else {
     cg.onCourt.push(pid);
     if(cg.running)cg.stints[pid]=now;
-    addEvent('sub_on',{player:p?p.name:'?'});
+    addEvent('sub_on',{player:p?p.name:'?',pid:pid});
   }
   save();renderOnCourtSection();renderActionPanel();renderRosterTable();renderStatus();
 }
@@ -1841,8 +1866,6 @@ function undoOppScore(){
   }
   save();renderScores();
 }
-
-let oppRebLog=[];  // {type:'off'|'def', tlEventId}
 
 function addOppReb(type){
   const cg=state.currentGame;if(!cg||cg.ended)return;
@@ -2269,7 +2292,9 @@ function saveEditModal(){
   if(gameTypeEl)g.gameType=gameTypeEl.value;
   // Save player stats
   document.querySelectorAll('#edit-modal-body .edit-input').forEach(input=>{
-    const pid=parseInt(input.dataset.pid);const field=input.dataset.field;const val=parseInt(input.value)||0;
+    const pid=parseInt(input.dataset.pid);const field=input.dataset.field;
+    // Use parseFloat for minutes to preserve sub-minute precision
+    const val=field==='mins'?parseFloat(input.value)||0:parseInt(input.value)||0;
     if(field==='mins')g.summary.minutes[pid]=val;
     else{if(!g.summary.stats[pid])g.summary.stats[pid]=emptyStats();g.summary.stats[pid][field]=val;}
   });
@@ -2605,10 +2630,16 @@ function closeGameDetail(){
 
 /* ── GAME REPORT (PDF-ready, iOS-compatible) ── */
 function computePlusMinus(g){
-  // Reconstruct +/- from timeline for a completed game
   if(g.summary&&g.summary.plusMinus)return g.summary.plusMinus;
   const pm={};state.players.forEach(p=>{pm[p.id]=0;});
   const timeline=g.timeline||[];const onAt={};
+  // Helper: prefer stored pid, fall back to name for historical events
+  function resolveId(evData){
+    if(evData&&evData.pid!=null)return evData.pid;
+    const name=evData&&evData.player?evData.player:'';
+    const p=state.players.find(p=>p.name===name);
+    return p?p.id:null;
+  }
   for(const ev of timeline){
     if(ev.type==='start'){
       const label=ev.data&&ev.data.label?ev.data.label:'';
@@ -2623,9 +2654,8 @@ function computePlusMinus(g){
   }
   for(const ev of timeline){
     const sh=ev.scoreHome||0;const sa=ev.scoreAway||0;
-    const pname=ev.data&&ev.data.player?ev.data.player:'';
-    if(ev.type==='sub_on'){const p=state.players.find(p=>p.name===pname);if(p)onAt[p.id]={sh,sa};}
-    else if(ev.type==='sub_off'){const p=state.players.find(p=>p.name===pname);if(p&&onAt[p.id]!==undefined){pm[p.id]+=(sh-onAt[p.id].sh)-(sa-onAt[p.id].sa);delete onAt[p.id];}}
+    if(ev.type==='sub_on'){const pid=resolveId(ev.data);if(pid!=null)onAt[pid]={sh,sa};}
+    else if(ev.type==='sub_off'){const pid=resolveId(ev.data);if(pid!=null&&onAt[pid]!==undefined){pm[pid]+=(sh-onAt[pid].sh)-(sa-onAt[pid].sa);delete onAt[pid];}}
   }
   const fsh=g.scoreHome||0;const fsa=g.scoreAway||0;
   Object.keys(onAt).forEach(pid=>{const pidN=parseInt(pid);pm[pidN]=(pm[pidN]||0)+(fsh-onAt[pidN].sh)-(fsa-onAt[pidN].sa);});
