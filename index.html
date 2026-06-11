@@ -2301,7 +2301,6 @@ function addPlayer(){
   save();renderSetup();
 }
 function runTournamentMigration(){
-  // Find all domestic games with periodSecs === 1080 (18 min halves)
   const targets=state.games.filter(g=>g.gameType==='domestic'&&g.periodSecs===1080);
   if(targets.length===0){
     showSyncBadge('No 18-min domestic games found — nothing to change');
@@ -2336,6 +2335,7 @@ function showMigrationPreview(){
   card.style.display='block';
   preview.innerHTML='Will re-tag: '+targets.map(g=>`<strong>${g.date||'?'} vs ${g.opponent||'?'}</strong>`).join(', ');
 }
+function clearAll(){
   if(!confirm('Clear all game data? Squad will be kept.'))return;
   state={players:state.players,games:[],currentGame:null};
   pendingStarters=new Set();save();render();renderStarterGrid();
