@@ -671,6 +671,12 @@ table.stbl td:first-child{text-align:left;font-weight:500;}
     </div>
     <input type="file" id="import-file" accept=".json" style="display:none;" onchange="importData(event)"/>
   </div>
+  <div class="card" id="migration-card" style="border-color:rgba(217,119,6,0.4);background:var(--amber-bg);">
+    <div class="sec-label" style="color:var(--amber);">One-time data fix</div>
+    <div class="backup-info" style="margin-bottom:10px;">Re-tags the 5 Nunawading tournament games (2 × 18 min halves, currently stored as Domestic) as <strong>Tournament</strong>. The Koonung 3 game (2 × 20 min) stays as Domestic. Run once — button disappears after.</div>
+    <div id="migration-preview" style="font-size:12px;color:var(--muted);margin-bottom:10px;"></div>
+    <button class="btn btn-amber" style="width:100%;" onclick="runTournamentMigration()">⚡ Fix Nunawading games → Tournament</button>
+  </div>
 </div>
 
 <!-- EDIT MODAL -->
@@ -1168,6 +1174,7 @@ function load(){
   render();
   if(state.currentGame&&state.currentGame.running)startTimer();
   requestWakeLock();
+  showMigrationPreview();
   // Pull any new games from cloud silently
   loadGamesFromCloud().then(hadNew=>{
     if(hadNew){renderSeason();showSyncBadge('↓ '+state.games.length+' games loaded from cloud');}
@@ -1218,7 +1225,7 @@ function showScreen(name,el){
   if(name==='squad')renderSetup();
   if(name==='timeline'){populateTlSelector();renderTimeline();}
   if(name==='shots'){populateScGameSel();populateImportGameSel();renderShotChart();}
-  if(name==='data'){}  // static, nothing to render
+  if(name==='data'){showMigrationPreview();}
   requestWakeLock();
 }
 
@@ -2293,7 +2300,42 @@ function addPlayer(){
   document.getElementById('new-num').value='';document.getElementById('new-name').value='';
   save();renderSetup();
 }
-function clearAll(){
+function runTournamentMigration(){
+  // Find all domestic games with periodSecs === 1080 (18 min halves)
+  const targets=state.games.filter(g=>g.gameType==='domestic'&&g.periodSecs===1080);
+  if(targets.length===0){
+    showSyncBadge('No 18-min domestic games found — nothing to change');
+    document.getElementById('migration-card').style.display='none';
+    return;
+  }
+  const names=targets.map(g=>(g.date||'?')+' vs '+(g.opponent||'?')).join(', ');
+  if(!confirm('Re-tag '+targets.length+' game(s) as Tournament?\n\n'+names))return;
+  targets.forEach(g=>{
+    g.gameType='tournament';
+    // Also update summary if present
+    if(g.summary)g.summary.gameType='tournament';
+  });
+  save();
+  renderSeason();
+  showSyncBadge('✓ '+targets.length+' game(s) re-tagged as Tournament');
+  // Hide the migration card — job done
+  document.getElementById('migration-card').style.display='none';
+  // Sync changes to cloud
+  targets.forEach(g=>syncGameToCloud(g));
+}
+
+function showMigrationPreview(){
+  const card=document.getElementById('migration-card');
+  const preview=document.getElementById('migration-preview');
+  if(!card||!preview)return;
+  const targets=state.games.filter(g=>g.gameType==='domestic'&&g.periodSecs===1080);
+  if(targets.length===0){
+    card.style.display='none';
+    return;
+  }
+  card.style.display='block';
+  preview.innerHTML='Will re-tag: '+targets.map(g=>`<strong>${g.date||'?'} vs ${g.opponent||'?'}</strong>`).join(', ');
+}
   if(!confirm('Clear all game data? Squad will be kept.'))return;
   state={players:state.players,games:[],currentGame:null};
   pendingStarters=new Set();save();render();renderStarterGrid();
