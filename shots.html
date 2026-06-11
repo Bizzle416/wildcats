@@ -608,8 +608,8 @@ function endGame(){
 }
 
 function newGame(){
-  // Keep shots in localStorage (for export) but go back to setup for new session
-  // Reset session variables without clearing shots array
+  // Confirm if there are unsaved shots
+  if(shots.length>0&&!confirm('Start a new game? Current shots will be cleared.\n\nMake sure you have already exported/copied this game\'s shots.'))return;
   selectedPlayer=null;selectedMade=null;currentPeriod=1;
   pendingX=null;pendingY=null;
   cancelShot();
