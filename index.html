@@ -2749,20 +2749,23 @@ function openGameReport(idx){
   let statsRows='';
   sortedByRating.forEach(p=>{
     const s=p.s;const m=p.mins;const pm=p.pm;const r=p.rating;
-    const fg=s.fga>0?Math.round(s.fgm/s.fga*100)+'%':'—';
-    const ft=s.fta>0?Math.round((s.ftm||0)/s.fta*100)+'%':'—';
     const pts40=m>0?(s.pts||0)/m*40:0;
     const color=r!==null?ratingColor(r):'#aaa';
+    const fg=s.fga>0?Math.round(s.fgm/s.fga*100)+'%':'—';
+    const fg3rep=(s.fg3a||0)>0?Math.round((s.fg3m||0)/s.fg3a*100)+'%':'—';
+    const ft=s.fta>0?Math.round((s.ftm||0)/s.fta*100)+'%':'—';
     statsRows+=`<tr style="background:${rowBg(r)};">
       <td style="text-align:left;font-weight:500;padding:7px 8px;">${p.num} ${p.name}</td>
       <td>${Math.floor(m)}:${String(Math.floor((m-Math.floor(m))*60)).padStart(2,'0')}</td>
-      <td>${pmBadge(pm)}</td>
       <td style="font-weight:600;">${s.pts||0}</td>
-      <td>${s.ftm||0}/${s.fta||0}</td><td style="color:#666;">${ft}</td>
-      <td style="color:#2563eb;">${s.fgm}/${s.fga}</td><td style="color:#666;">${fg}</td>
-      <td>${s.ast}</td><td>${s.reb}</td><td>${s.stl}</td><td>${s.blk}</td>
+      <td style="color:#2563eb;">${s.fgm}</td><td>${s.fga}</td><td style="color:#666;">${fg}</td>
+      <td style="color:#2563eb;">${s.fg3m||0}</td><td>${s.fg3a||0}</td><td style="color:#666;">${fg3rep}</td>
+      <td style="color:#2563eb;">${s.ftm||0}</td><td>${s.fta}</td><td style="color:#666;">${ft}</td>
+      <td>${s.reb}</td><td>${s.ast}</td>
       <td style="color:#dc2626;">${s.tov}</td>
+      <td>${s.stl}</td><td>${s.blk}</td>
       <td style="color:${s.foul>=4?'#a32d2d':'#d97706'};${s.foul>=4?'font-weight:700;':''}">${s.foul||0}</td>
+      <td>${pmBadge(pm)}</td>
       <td>${ratingBar(r,color)}</td>
     </tr>`;
   });
@@ -2789,7 +2792,7 @@ function openGameReport(idx){
     <td>${totPts}</td>
     <td style="color:#2563eb;">${totFgm}</td><td>${totFga}</td><td style="color:#666;">${totFgPct}</td>
     <td style="color:#2563eb;">${totFg3m}</td><td>${totFg3a}</td><td style="color:#666;">${totFg3Pct}</td>
-    <td>${totFtm}</td><td>${totFta}</td><td style="color:#666;">${totFtPct}</td>
+    <td style="color:#2563eb;">${totFtm}</td><td>${totFta}</td><td style="color:#666;">${totFtPct}</td>
     <td>${totReb}</td><td>${totAst}</td>
     <td style="color:#dc2626;">${totTov}</td><td>${totStl}</td><td>${totBlk}</td>
     <td style="color:#d97706;">${totFoul}</td><td>—</td><td>—</td>
