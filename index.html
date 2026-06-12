@@ -415,7 +415,8 @@ table.stbl td:first-child{text-align:left;font-weight:500;}
           <button class="action-btn miss" onclick="logAction('ft_miss')">FT-X<div class="abl">FT missed</div></button>
           <button class="action-btn pts2" onclick="logAction('2pt')">+2<div class="abl">Field goal</div></button>
           <button class="action-btn pts3" onclick="logAction('3pt')">+3<div class="abl">3-pointer</div></button>
-          <button class="action-btn miss" onclick="logAction('fga')">FGA<div class="abl">Missed shot</div></button>
+          <button class="action-btn miss" onclick="logAction('fga')">FGA<div class="abl">Missed 2pt</div></button>
+          <button class="action-btn miss" onclick="logAction('fga3')">3PA<div class="abl">Missed 3pt</div></button>
           <button class="action-btn" onclick="logAction('ast')">AST<div class="abl">Assist</div></button>
           <button class="action-btn" onclick="logAction('reb')">REB<div class="abl">Rebound</div></button>
           <button class="action-btn" onclick="logAction('stl')">STL<div class="abl">Steal</div></button>
@@ -471,7 +472,7 @@ table.stbl td:first-child{text-align:left;font-weight:500;}
     <div class="sec-label" style="padding:0 14px 6px;">All players <span style="font-weight:400;text-transform:none;letter-spacing:0;font-size:11px;color:var(--muted);">— tap ● to sub on/off</span></div>
     <div class="roster-wrap">
       <table class="rtbl">
-        <thead><tr><th>Player</th><th>MIN</th><th>+/−</th><th>FTM</th><th>FTA</th><th>FT%</th><th>FGM</th><th>FGA</th><th>FG%</th><th>AST</th><th>REB</th><th>STL</th><th>BLK</th><th>TO</th><th>FL</th></tr></thead>
+        <thead><tr><th>Player</th><th>MIN</th><th>PTS</th><th>FGM</th><th>FGA</th><th>FG%</th><th>3PTM</th><th>3PTA</th><th>3PT%</th><th>FTM</th><th>FTA</th><th>FT%</th><th>REB</th><th>AST</th><th>TO</th><th>STL</th><th>BLK</th><th>PF</th><th>+/−</th></tr></thead>
         <tbody id="roster-body"></tbody>
       </table>
     </div>
@@ -530,7 +531,7 @@ table.stbl td:first-child{text-align:left;font-weight:500;}
         <button class="btn" id="stats-view-avg" onclick="setStatsView('avg')" style="font-size:11px;padding:5px 10px;">Per game avg</button>
       </div>
       <div class="tbl-wrap">
-        <table class="stbl"><thead><tr><th style="min-width:100px;">Player</th><th>GP</th><th>PTS</th><th>FTM</th><th>FTA</th><th>FT%</th><th>FGM</th><th>FGA</th><th>FG%</th><th>AST</th><th>REB</th><th>STL</th><th>BLK</th><th>TO</th><th>FL</th><th>+/−</th></tr></thead><tbody id="season-stats-body"></tbody></table>
+        <table class="stbl"><thead><tr><th style="min-width:100px;">Player</th><th>GP</th><th>MIN</th><th>PTS</th><th>FGM</th><th>FGA</th><th>FG%</th><th>3PTM</th><th>3PTA</th><th>3PT%</th><th>FTM</th><th>FTA</th><th>FT%</th><th>REB</th><th>AST</th><th>TO</th><th>STL</th><th>BLK</th><th>PF</th><th>+/−</th></tr></thead><tbody id="season-stats-body"></tbody></table>
       </div>
     </div>
   </div>
@@ -1118,7 +1119,7 @@ let selectedPid=null;
 let editingGameIdx=null;
 let pendingStarters=new Set();
 
-function emptyStats(){return{fgm:0,fga:0,ftm:0,fta:0,ast:0,reb:0,stl:0,blk:0,tov:0,foul:0,pts:0};}
+function emptyStats(){return{fgm:0,fga:0,fg3m:0,fg3a:0,ftm:0,fta:0,ast:0,reb:0,stl:0,blk:0,tov:0,foul:0,pts:0};}
 
 function save(){
   try{
@@ -1432,12 +1433,14 @@ function renderRosterTable(){
   tbody.innerHTML='';
   const pmMap=calcLivePlusMinus();
   // totals accumulators
-  let totMins=0,totFtm=0,totFta=0,totFgm=0,totFga=0,totAst=0,totReb=0,totStl=0,totBlk=0,totTov=0,totFoul=0;
+  let totMins=0,totPts=0,totFtm=0,totFta=0,totFgm=0,totFga=0,totFg3m=0,totFg3a=0,totAst=0,totReb=0,totStl=0,totBlk=0,totTov=0,totFoul=0;
   sorted.forEach(p=>{
     const isOn=cg&&cg.onCourt.includes(p.id);
     const mins=getPlayerMins(p.id,now);
     const s=cg&&cg.stats?cg.stats[p.id]:null;
     const fgpct=s&&s.fga>0?Math.round(s.fgm/s.fga*100)+'%':'—';
+    const fg3pct=s&&(s.fg3a||0)>0?Math.round((s.fg3m||0)/s.fg3a*100)+'%':'—';
+    const ftpct=s&&s.fta>0?Math.round((s.ftm||0)/s.fta*100)+'%':'—';
     const tr=document.createElement('tr');if(isOn)tr.classList.add('on-row');
     const nameTd=document.createElement('td');
     nameTd.innerHTML=`<div class="pname-cell">
@@ -1445,7 +1448,16 @@ function renderRosterTable(){
       <span class="pnum-tag">${p.num}</span><span style="font-size:12px;">${p.name}</span></div>`;
     tr.appendChild(nameTd);
     const minsTd=document.createElement('td');minsTd.className='mins-cell';minsTd.textContent=fmtMins(mins);tr.appendChild(minsTd);
-    // +/- cell
+    // New order: PTS FGM FGA FG% 3PTM 3PTA 3PT% FTM FTA FT% REB AST TO STL BLK PF then +/-
+    const vals=s?[s.pts||0,s.fgm,s.fga,fgpct,s.fg3m||0,s.fg3a||0,fg3pct,s.ftm||0,s.fta,ftpct,s.reb,s.ast,s.tov,s.stl,s.blk,s.foul||0]:['—','—','—','—','—','—','—','—','—','—','—','—','—','—','—','—'];
+    vals.forEach((v,i)=>{
+      const td=document.createElement('td');
+      if(i===2)td.className='fgm-val';   // FGM blue
+      if(i===12)td.className='tov-val';  // TO red
+      if(i===15)td.style.color='var(--amber)'; // PF amber
+      td.textContent=v;tr.appendChild(td);
+    });
+    // +/- last
     const pm=mins>0.1?(pmMap[p.id]||0):null;
     const pmTd=document.createElement('td');
     if(pm===null){pmTd.textContent='—';pmTd.className='pm-zero';}
@@ -1453,37 +1465,29 @@ function renderRosterTable(){
     else if(pm<0){pmTd.textContent=pm;pmTd.className='pm-neg';}
     else{pmTd.textContent='0';pmTd.className='pm-zero';}
     tr.appendChild(pmTd);
-    const ftpct=s&&s.fta>0?Math.round(s.ftm/s.fta*100)+'%':'—';
-    const vals=s?[s.ftm||0,s.fta||0,ftpct,s.fgm,s.fga,fgpct,s.ast,s.reb,s.stl,s.blk,s.tov,s.foul||0]:['—','—','—','—','—','—','—','—','—','—','—','—'];
-    vals.forEach((v,i)=>{
-      const td=document.createElement('td');
-      if(i===3)td.className='fgm-val';if(i===10)td.className='tov-val';if(i===11)td.style.color='var(--amber)';
-      td.textContent=v;tr.appendChild(td);
-    });
     tbody.appendChild(tr);
-    // accumulate totals
-    if(s){totMins+=mins;totFtm+=s.ftm||0;totFta+=s.fta||0;totFgm+=s.fgm;totFga+=s.fga;totAst+=s.ast;totReb+=s.reb;totStl+=s.stl;totBlk+=s.blk;totTov+=s.tov;totFoul+=s.foul||0;}
+    if(s){totMins+=mins;totPts+=s.pts||0;totFtm+=s.ftm||0;totFta+=s.fta||0;totFgm+=s.fgm;totFga+=s.fga;totFg3m+=s.fg3m||0;totFg3a+=s.fg3a||0;totAst+=s.ast;totReb+=s.reb;totStl+=s.stl;totBlk+=s.blk;totTov+=s.tov;totFoul+=s.foul||0;}
   });
   // totals row
   if(cg){
     const totFgpct=totFga>0?Math.round(totFgm/totFga*100)+'%':'—';
+    const totFg3pct=totFg3a>0?Math.round(totFg3m/totFg3a*100)+'%':'—';
+    const totFtpct=totFta>0?Math.round(totFtm/totFta*100)+'%':'—';
     const ttr=document.createElement('tr');
     ttr.style.cssText='border-top:2px solid var(--border2);background:var(--surface2);font-weight:600;';
     const tnameTd=document.createElement('td');
     tnameTd.innerHTML=`<div class="pname-cell" style="padding-left:2px;"><span style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;">Team totals</span></div>`;
     ttr.appendChild(tnameTd);
     const tminsTd=document.createElement('td');tminsTd.className='mins-cell';tminsTd.style.fontWeight='700';tminsTd.textContent=fmtMins(totMins);ttr.appendChild(tminsTd);
-    // blank +/- in totals (doesn't aggregate meaningfully)
-    const tpmTd=document.createElement('td');tpmTd.textContent='—';tpmTd.className='pm-zero';ttr.appendChild(tpmTd);
-    const totFtpct=totFta>0?Math.round(totFtm/totFta*100)+'%':'—';
-    [totFtm,totFta,totFtpct,totFgm,totFga,totFgpct,totAst,totReb,totStl,totBlk,totTov,totFoul].forEach((v,i)=>{
-      const td=document.createElement('td');
-      td.style.fontWeight='700';
-      if(i===3)td.style.color='#2563eb';
-      if(i===10)td.style.color='var(--red)';
-      if(i===11)td.style.color='var(--amber)';
+    [totPts,totFgm,totFga,totFgpct,totFg3m,totFg3a,totFg3pct,totFtm,totFta,totFtpct,totReb,totAst,totTov,totStl,totBlk,totFoul].forEach((v,i)=>{
+      const td=document.createElement('td');td.style.fontWeight='700';
+      if(i===2)td.style.color='#2563eb';   // FGM
+      if(i===12)td.style.color='var(--red)'; // TO
+      if(i===15)td.style.color='var(--amber)'; // PF
       td.textContent=v;ttr.appendChild(td);
     });
+    // blank +/- in totals
+    const tpmTd=document.createElement('td');tpmTd.textContent='—';tpmTd.style.fontWeight='700';ttr.appendChild(tpmTd);
     tbody.appendChild(ttr);
   }
 }
@@ -1804,13 +1808,14 @@ function logAction(type){
   const s=cg.stats[selectedPid];
   const p=state.players.find(p=>p.id===selectedPid);
   const pname=p?p.name:'?';
-  const labels={'1pt':'Free throw made','ft_miss':'Free throw missed','2pt':'Field goal (+2)','3pt':'Three pointer (+3)','fga':'Missed shot','ast':'Assist','reb':'Rebound','stl':'Steal','blk':'Block','tov':'Turnover','foul':'Personal foul'};
+  const labels={'1pt':'Free throw made','ft_miss':'Free throw missed','2pt':'Field goal (+2)','3pt':'Three pointer (+3)','fga':'Missed 2pt','fga3':'Missed 3pt','ast':'Assist','reb':'Rebound','stl':'Steal','blk':'Block','tov':'Turnover','foul':'Personal foul'};
   let pts=0;
   if(type==='1pt'){s.ftm++;s.fta++;s.pts+=1;pts=1;cg.scoreHome+=1;addEvent('pts_1',{player:pname,label:'Free throw made',pts:1});}
   else if(type==='ft_miss'){s.fta++;addEvent('ft_miss',{player:pname});}
   else if(type==='2pt'){s.fgm++;s.fga++;s.pts+=2;pts=2;cg.scoreHome+=2;addEvent('pts_2',{player:pname,label:'Field goal (+2)',pts:2});}
-  else if(type==='3pt'){s.fgm++;s.fga++;s.pts+=3;pts=3;cg.scoreHome+=3;addEvent('pts_3',{player:pname,label:'Three pointer (+3)',pts:3});}
+  else if(type==='3pt'){s.fgm++;s.fga++;s.fg3m++;s.fg3a++;s.pts+=3;pts=3;cg.scoreHome+=3;addEvent('pts_3',{player:pname,label:'Three pointer (+3)',pts:3});}
   else if(type==='fga'){s.fga++;addEvent('fga',{player:pname});}
+  else if(type==='fga3'){s.fga++;s.fg3a++;addEvent('fga3',{player:pname});}
   else if(type==='ast'){s.ast++;addEvent('ast',{player:pname});}
   else if(type==='reb'){s.reb++;addEvent('reb',{player:pname});}
   else if(type==='stl'){s.stl++;addEvent('stl',{player:pname});}
@@ -1833,10 +1838,13 @@ function undoAction(){
   const s=cg.stats[last.pid];
   if(last.type==='1pt'){
     if(s.ftm>0)s.ftm--;if(s.fta>0)s.fta--;s.pts=Math.max(0,s.pts-last.pts);cg.scoreHome=Math.max(0,cg.scoreHome-last.pts);
-  } else if(last.type==='2pt'||last.type==='3pt'){
+  } else if(last.type==='2pt'){
     if(s.fgm>0)s.fgm--;if(s.fga>0)s.fga--;s.pts=Math.max(0,s.pts-last.pts);cg.scoreHome=Math.max(0,cg.scoreHome-last.pts);
+  } else if(last.type==='3pt'){
+    if(s.fgm>0)s.fgm--;if(s.fga>0)s.fga--;if(s.fg3m>0)s.fg3m--;if(s.fg3a>0)s.fg3a--;s.pts=Math.max(0,s.pts-last.pts);cg.scoreHome=Math.max(0,cg.scoreHome-last.pts);
   } else if(last.type==='ft_miss'){if(s.fta>0)s.fta--;}
   else if(last.type==='fga'){if(s.fga>0)s.fga--;}
+  else if(last.type==='fga3'){if(s.fga>0)s.fga--;if(s.fg3a>0)s.fg3a--;}
   else{if(s[last.type]!==undefined&&s[last.type]>0)s[last.type]--;}
   // Remove by unique ID — safe regardless of what else was undone
   if(cg.timeline&&last.tlEventId!=null){
@@ -2159,23 +2167,24 @@ function renderSeason(){
     renderMinsSections();
     return;
   }
-  const totStats={};const gpCount={};const totPm={};
-  state.players.forEach(p=>{totStats[p.id]=emptyStats();gpCount[p.id]=0;totPm[p.id]=0;});
+  const totStats={};const gpCount={};const totPm={};const totMinsMap={};
+  state.players.forEach(p=>{totStats[p.id]=emptyStats();gpCount[p.id]=0;totPm[p.id]=0;totMinsMap[p.id]=0;});
   games.forEach(g=>{
     if(g.summary){
       state.players.forEach(p=>{
         const hasMins=(g.summary.minutes[p.id]||0)>0.5;
         if(hasMins)gpCount[p.id]++;
         if(g.summary.stats){
-          ['fgm','fga','ftm','fta','ast','reb','stl','blk','tov','foul','pts'].forEach(k=>{totStats[p.id][k]+=(g.summary.stats[p.id]?g.summary.stats[p.id][k]||0:0);});
+          ['fgm','fga','fg3m','fg3a','ftm','fta','ast','reb','stl','blk','tov','foul','pts'].forEach(k=>{totStats[p.id][k]+=(g.summary.stats[p.id]?g.summary.stats[p.id][k]||0:0);});
         }
         totPm[p.id]+=(g.summary.plusMinus?g.summary.plusMinus[p.id]||0:0);
+        totMinsMap[p.id]+=(g.summary.minutes?g.summary.minutes[p.id]||0:0);
       });
     }
   });
   // Cache so setStatsView can re-render table without re-running full season
-  renderSeason._statCache={totStats,gpCount,totPm};
-  renderSeasonStatsTable(totStats,gpCount,totPm);
+  renderSeason._statCache={totStats,gpCount,totPm,totMinsMap};
+  renderSeasonStatsTable(totStats,gpCount,totPm,totMinsMap);
   renderMinsSections();
 }
 
@@ -2189,31 +2198,36 @@ function setStatsView(v){
   });
   // Use cached data if available — avoids full season re-render on every toggle
   const cache=renderSeason._statCache;
-  if(cache){renderSeasonStatsTable(cache.totStats,cache.gpCount,cache.totPm);}
+  if(cache){renderSeasonStatsTable(cache.totStats,cache.gpCount,cache.totPm,cache.totMinsMap||{});}
   else{renderSeason();}
 }
 
-function renderSeasonStatsTable(totStats,gpCount,totPm){
+function renderSeasonStatsTable(totStats,gpCount,totPm,totMinsMap){
   const isAvg=currentStatsView==='avg';
   const sorted=[...state.players].sort((a,b)=>a.id-b.id);
-  function fmt(v,gp){
+  totMinsMap=totMinsMap||{};
+  function fmt(v,gp,type){
+    if(type==='mins'){if(isAvg){if(!gp)return'—';const avg=v/gp;return Math.floor(avg)+':'+String(Math.floor((avg-Math.floor(avg))*60)).padStart(2,'0');}return fmtMins(v);}
     if(isAvg){if(!gp)return'—';return(v/gp).toFixed(1);}
     return v;
   }
   function fmtPct(made,att){return att>0?Math.round(made/att*100)+'%':'—';}
   document.getElementById('season-stats-body').innerHTML=sorted.map(p=>{
-    const s=totStats[p.id];const gp=gpCount[p.id];const pm=totPm[p.id];
-    const fg=fmtPct(s.fgm,s.fga);const ft=fmtPct(s.ftm||0,s.fta);
+    const s=totStats[p.id];const gp=gpCount[p.id];const pm=totPm[p.id];const totMinsP=totMinsMap[p.id]||0;
+    const fg=fmtPct(s.fgm,s.fga);const fg3=fmtPct(s.fg3m||0,s.fg3a||0);const ft=fmtPct(s.ftm||0,s.fta);
     const pmStr=pm>0?'+'+pm:pm;const pmCol=pm>0?'var(--green)':pm<0?'var(--red)':'var(--muted)';
-    if(!gp)return`<tr style="opacity:0.45;"><td>${p.num} ${p.name}</td><td>0</td><td colspan="14" style="color:var(--muted);font-size:11px;">No games played</td></tr>`;
+    if(!gp)return`<tr style="opacity:0.45;"><td>${p.num} ${p.name}</td><td>0</td><td colspan="18" style="color:var(--muted);font-size:11px;">No games played</td></tr>`;
     return`<tr>
       <td>${p.num} ${p.name}</td>
       <td style="color:var(--muted);">${gp}</td>
+      <td style="font-family:'DM Mono',monospace;font-size:11px;">${isAvg&&gp?fmtMins(totMinsP/gp):fmtMins(totMinsP)}</td>
       <td style="font-weight:600;">${fmt(s.pts||0,gp)}</td>
-      <td>${fmt(s.ftm||0,gp)}</td><td>${fmt(s.fta,gp)}</td><td style="color:var(--muted);">${ft}</td>
       <td style="color:#2563eb;">${fmt(s.fgm,gp)}</td><td>${fmt(s.fga,gp)}</td><td style="color:var(--muted);">${fg}</td>
-      <td>${fmt(s.ast,gp)}</td><td>${fmt(s.reb,gp)}</td><td>${fmt(s.stl,gp)}</td><td>${fmt(s.blk,gp)}</td>
+      <td style="color:#2563eb;">${fmt(s.fg3m||0,gp)}</td><td>${fmt(s.fg3a||0,gp)}</td><td style="color:var(--muted);">${fg3}</td>
+      <td>${fmt(s.ftm||0,gp)}</td><td>${fmt(s.fta,gp)}</td><td style="color:var(--muted);">${ft}</td>
+      <td>${fmt(s.reb,gp)}</td><td>${fmt(s.ast,gp)}</td>
       <td style="color:var(--red);">${fmt(s.tov,gp)}</td>
+      <td>${fmt(s.stl,gp)}</td><td>${fmt(s.blk,gp)}</td>
       <td style="color:var(--amber);">${fmt(s.foul||0,gp)}</td>
       <td style="color:${pmCol};font-weight:600;">${pmStr}</td>
     </tr>`;
@@ -2248,7 +2262,7 @@ function openEditModal(idx){
     </div>
   </div>
   <div style="overflow-x:auto;"><table class="edit-tbl">
-    <thead><tr><th>Player</th><th>MIN</th><th>PTS</th><th>FTM</th><th>FTA</th><th>FGM</th><th>FGA</th><th>AST</th><th>REB</th><th>STL</th><th>BLK</th><th>TO</th><th>FL</th></tr></thead><tbody>`;
+    <thead><tr><th>Player</th><th>MIN</th><th>PTS</th><th>FGM</th><th>FGA</th><th>FG%</th><th>3PTM</th><th>3PTA</th><th>3PT%</th><th>FTM</th><th>FTA</th><th>FT%</th><th>REB</th><th>AST</th><th>TO</th><th>STL</th><th>BLK</th><th>PF</th></tr></thead><tbody>`;
   sorted.forEach(p=>{
     const mins=g.summary?Math.round(g.summary.minutes[p.id]||0):0;
     const s=g.summary&&g.summary.stats?g.summary.stats[p.id]||emptyStats():emptyStats();
@@ -2375,7 +2389,7 @@ function exportCSV(){
   // header — team-level opp reb only on first player row per game
   rows.push(['Date','Round','Opposition','Venue','Game Type','Result','Eltham Score','Opp Score',
     'Opp Reb Off','Opp Reb Def','Opp Reb Total',
-    'Player','#','MIN (decimal)','PTS','FTM','FTA','FT%','FGM','FGA','FG%','AST','REB','STL','BLK','TO','FL'].join(','));
+    'Player','#','MIN (decimal)','PTS','FGM','FGA','FG%','3PTM','3PTA','3PT%','FTM','FTA','FT%','REB','AST','TO','STL','BLK','PF'].join(','));
   games.forEach(g=>{
     const diff=(g.scoreHome||0)-(g.scoreAway||0);
     const result=diff>0?'W':diff<0?'L':'D';
@@ -2405,17 +2419,20 @@ function exportCSV(){
         p.num,
         minsStr,
         s.pts||0,
-        s.ftm||0,
-        s.fta||0,
-        ft,
         s.fgm,
         s.fga,
         fg,
-        s.ast,
+        s.fg3m||0,
+        s.fg3a||0,
+        (s.fg3a||0)>0?Math.round((s.fg3m||0)/s.fg3a*100)+'%':'',
+        s.ftm||0,
+        s.fta||0,
+        ft,
         s.reb,
+        s.ast,
+        s.tov,
         s.stl,
         s.blk,
-        s.tov,
         s.foul||0
       ].join(','));
     });
@@ -2558,7 +2575,7 @@ function openGameDetail(idx){
       ${oppRebOff>0?`<div style="font-size:11px;color:var(--red);margin-top:6px;">⚠ ${g.opponent||'Opp'} had ${oppRebOff} offensive rebound${oppRebOff!==1?'s':''}</div>`:''}
     </div>`;
   }
-  html+=`<div class="card" style="padding:10px 0;margin-bottom:10px;"><div class="sec-label" style="padding:0 14px 8px;">Player stats</div><div style="overflow-x:auto;"><table class="rtbl"><thead><tr><th>Player</th><th>MIN</th><th>+/−</th><th>PTS</th><th>FTM</th><th>FTA</th><th>FT%</th><th>FGM</th><th>FGA</th><th>FG%</th><th>AST</th><th>REB</th><th>STL</th><th>BLK</th><th>TO</th><th>FL</th></tr></thead><tbody>`;
+  html+=`<div class="card" style="padding:10px 0;margin-bottom:10px;"><div class="sec-label" style="padding:0 14px 8px;">Player stats</div><div style="overflow-x:auto;"><table class="rtbl"><thead><tr><th>Player</th><th>MIN</th><th>PTS</th><th>FGM</th><th>FGA</th><th>FG%</th><th>3PTM</th><th>3PTA</th><th>3PT%</th><th>FTM</th><th>FTA</th><th>FT%</th><th>REB</th><th>AST</th><th>TO</th><th>STL</th><th>BLK</th><th>PF</th><th>+/−</th></tr></thead><tbody>`;
   sorted.forEach(p=>{
     const m=g.summary?g.summary.minutes[p.id]||0:0;
     const s=g.summary&&g.summary.stats?g.summary.stats[p.id]||emptyStats():emptyStats();
@@ -2566,8 +2583,21 @@ function openGameDetail(idx){
     const pmStr=pm===null||pm===undefined?'—':(pm>0?'+'+pm:String(pm));
     const pmColor=pm>0?'var(--green)':pm<0?'var(--red)':'var(--muted)';
     const fg=s.fga>0?Math.round(s.fgm/s.fga*100)+'%':'—';
+    const fg3gdp=(s.fg3a||0)>0?Math.round((s.fg3m||0)/s.fg3a*100)+'%':'—';
     const ftpctGdp=s.fta>0?Math.round((s.ftm||0)/s.fta*100)+'%':'—';
-    html+=`<tr><td><span style="font-size:10px;color:var(--muted);font-family:DM Mono,monospace;">${p.num}</span> ${p.name}</td><td style="font-family:DM Mono,monospace;font-size:11px;">${fmtMins(m)}</td><td style="font-weight:600;color:${pmColor};">${pmStr}</td><td>${s.pts||0}</td><td>${s.ftm||0}</td><td>${s.fta||0}</td><td style="color:var(--muted);">${ftpctGdp}</td><td>${s.fgm}</td><td>${s.fga}</td><td style="color:var(--muted);">${fg}</td><td>${s.ast}</td><td>${s.reb}</td><td>${s.stl}</td><td>${s.blk}</td><td style="color:var(--red);">${s.tov}</td><td style="color:var(--amber);">${s.foul||0}</td></tr>`;
+    html+=`<tr>
+      <td><span style="font-size:10px;color:var(--muted);font-family:DM Mono,monospace;">${p.num}</span> ${p.name}</td>
+      <td style="font-family:DM Mono,monospace;font-size:11px;">${fmtMins(m)}</td>
+      <td style="font-weight:600;">${s.pts||0}</td>
+      <td style="color:#2563eb;">${s.fgm}</td><td>${s.fga}</td><td style="color:var(--muted);">${fg}</td>
+      <td style="color:#2563eb;">${s.fg3m||0}</td><td>${s.fg3a||0}</td><td style="color:var(--muted);">${fg3gdp}</td>
+      <td>${s.ftm||0}</td><td>${s.fta}</td><td style="color:var(--muted);">${ftpctGdp}</td>
+      <td>${s.reb}</td><td>${s.ast}</td>
+      <td style="color:var(--red);">${s.tov}</td>
+      <td>${s.stl}</td><td>${s.blk}</td>
+      <td style="color:var(--amber);">${s.foul||0}</td>
+      <td style="color:${pmColor};font-weight:600;">${pmStr}</td>
+    </tr>`;
   });
   html+=`</tbody></table></div></div>`;
   // timeline
@@ -2741,6 +2771,8 @@ function openGameReport(idx){
   const totPts=playerData.reduce((a,p)=>a+(p.s.pts||0),0);
   const totFgm=playerData.reduce((a,p)=>a+p.s.fgm,0);
   const totFga=playerData.reduce((a,p)=>a+p.s.fga,0);
+  const totFg3m=playerData.reduce((a,p)=>a+(p.s.fg3m||0),0);
+  const totFg3a=playerData.reduce((a,p)=>a+(p.s.fg3a||0),0);
   const totFtm=playerData.reduce((a,p)=>a+(p.s.ftm||0),0);
   const totFta=playerData.reduce((a,p)=>a+p.s.fta,0);
   const totAst=playerData.reduce((a,p)=>a+p.s.ast,0);
@@ -2750,13 +2782,17 @@ function openGameReport(idx){
   const totTov=playerData.reduce((a,p)=>a+p.s.tov,0);
   const totFoul=playerData.reduce((a,p)=>a+(p.s.foul||0),0);
   const totFgPct=totFga>0?Math.round(totFgm/totFga*100)+'%':'—';
+  const totFg3Pct=totFg3a>0?Math.round(totFg3m/totFg3a*100)+'%':'—';
   const totFtPct=totFta>0?Math.round(totFtm/totFta*100)+'%':'—';
   statsRows+=`<tr style="background:#f5f5f7;font-weight:700;border-top:2px solid #dde;">
-    <td style="text-align:left;padding:7px 8px;">TEAM TOTAL</td><td>—</td><td>—</td>
-    <td>${totPts}</td><td>${totFtm}/${totFta}</td><td style="color:#666;">${totFtPct}</td>
-    <td style="color:#2563eb;">${totFgm}/${totFga}</td><td style="color:#666;">${totFgPct}</td>
-    <td>${totAst}</td><td>${totReb}</td><td>${totStl}</td><td>${totBlk}</td>
-    <td style="color:#dc2626;">${totTov}</td><td style="color:#d97706;">${totFoul}</td><td>—</td>
+    <td style="text-align:left;padding:7px 8px;">TEAM TOTAL</td><td>—</td>
+    <td>${totPts}</td>
+    <td style="color:#2563eb;">${totFgm}</td><td>${totFga}</td><td style="color:#666;">${totFgPct}</td>
+    <td style="color:#2563eb;">${totFg3m}</td><td>${totFg3a}</td><td style="color:#666;">${totFg3Pct}</td>
+    <td>${totFtm}</td><td>${totFta}</td><td style="color:#666;">${totFtPct}</td>
+    <td>${totReb}</td><td>${totAst}</td>
+    <td style="color:#dc2626;">${totTov}</td><td>${totStl}</td><td>${totBlk}</td>
+    <td style="color:#d97706;">${totFoul}</td><td>—</td><td>—</td>
   </tr>`;
 
   // ── REBOUND CALLOUT ──
@@ -3053,9 +3089,7 @@ tfoot td{background:#f5f5f7;font-size:11px;border-top:2px solid #dde;border-bott
 <div style="overflow-x:auto;">
 <table>
 <thead><tr>
-  <th style="min-width:120px;">Player</th><th>Min</th><th>+/−</th>
-  <th>PTS</th><th>FT</th><th>FT%</th><th>FG</th><th>FG%</th>
-  <th>AST</th><th>REB</th><th>STL</th><th>BLK</th><th>TO</th><th>FL</th><th style="min-width:90px;">Rating</th>
+  <th style="min-width:120px;">Player</th><th>Min</th><th>PTS</th><th>FGM</th><th>FGA</th><th>FG%</th><th>3PTM</th><th>3PTA</th><th>3PT%</th><th>FTM</th><th>FTA</th><th>FT%</th><th>REB</th><th>AST</th><th>TO</th><th>STL</th><th>BLK</th><th>PF</th><th>+/−</th><th style="min-width:90px;">Rating</th>
 </tr></thead>
 <tbody>${statsRows}</tbody>
 </table>
