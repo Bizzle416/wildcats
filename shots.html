@@ -160,7 +160,6 @@ select:focus,input:focus{border-color:var(--accent);}
         <div style="display:flex;gap:4px;margin-bottom:6px;">
           <button id="sort-num" onclick="setPlayerSort('num')" style="flex:1;font-size:10px;font-weight:600;padding:4px 2px;border-radius:5px;border:1px solid var(--border2);background:var(--accent);color:#fff;cursor:pointer;font-family:'DM Sans',sans-serif;">#</button>
           <button id="sort-first" onclick="setPlayerSort('first')" style="flex:1;font-size:10px;font-weight:600;padding:4px 2px;border-radius:5px;border:1px solid var(--border2);background:var(--surface2);color:var(--muted);cursor:pointer;font-family:'DM Sans',sans-serif;">First</button>
-          <button id="sort-sur" onclick="setPlayerSort('sur')" style="flex:1;font-size:10px;font-weight:600;padding:4px 2px;border-radius:5px;border:1px solid var(--border2);background:var(--surface2);color:var(--muted);cursor:pointer;font-family:'DM Sans',sans-serif;">Sur</button>
         </div>
         <div class="player-list" id="player-grid"></div>
       </div>
@@ -401,7 +400,7 @@ function redrawDotsForPeriod(){
 // ── Player list ──
 function setPlayerSort(s){
   playerSort=s;
-  ['num','first','sur'].forEach(k=>{
+  ['num','first'].forEach(k=>{
     const btn=document.getElementById('sort-'+k);
     if(btn){
       btn.style.background=k===s?'var(--accent)':'var(--surface2)';
@@ -415,20 +414,16 @@ function setPlayerSort(s){
 function renderPlayerGrid(){
   const sorted=[...SQUAD].sort((a,b)=>{
     if(playerSort==='num') return parseInt(a.num.replace('#',''))-parseInt(b.num.replace('#',''));
-    if(playerSort==='first') return a.name.split(' ')[0].localeCompare(b.name.split(' ')[0]);
-    // sur
-    const aSur=a.name.split(' ').pop();const bSur=b.name.split(' ').pop();
-    return aSur.localeCompare(bSur);
+    return a.name.split(' ')[0].localeCompare(b.name.split(' ')[0]);
   });
   const grid=document.getElementById('player-grid');
   grid.innerHTML=sorted.map(p=>{
-    const surname=p.name.split(' ').pop();
     const first=p.name.split(' ')[0];
-    const label=playerSort==='first'?first:surname;
+    const label=playerSort==='first'?first:p.name.split(' ').pop();
     return`<div class="player-btn${selectedPlayer&&selectedPlayer.id===p.id?' active':''}"
          onclick="selectPlayer(${p.id})">
       <span class="p-num">${p.num.replace('#','')}</span>
-      <span class="p-name">${label}</span>
+      <span class="p-name">${playerSort==='first'?first:p.name.split(' ').pop()}</span>
     </div>`;
   }).join('');
 }
