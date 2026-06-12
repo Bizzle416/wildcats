@@ -59,14 +59,14 @@ select:focus,input:focus{border-color:var(--accent);}
 .logger-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;align-items:start;}
 .panel-label{font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:6px;}
 
-/* ── PLAYER LIST (compact) ── */
-.player-list{display:flex;flex-direction:column;gap:5px;}
-.player-btn{padding:8px 10px;border-radius:var(--rs);border:1.5px solid var(--border2);background:var(--surface2);cursor:pointer;-webkit-user-select:none;display:flex;align-items:center;gap:7px;}
-.player-btn:active{transform:scale(0.96);}
+/* ── PLAYER GRID (compact 2-col) ── */
+.player-list{display:grid;grid-template-columns:1fr 1fr;gap:5px;}
+.player-btn{padding:8px 8px;border-radius:var(--rs);border:1.5px solid var(--border2);background:var(--surface2);cursor:pointer;-webkit-user-select:none;display:flex;align-items:center;gap:6px;}
+.player-btn:active{transform:scale(0.94);}
 .player-btn.active{background:var(--accent-bg);border-color:var(--accent);}
-.p-num{font-size:10px;color:var(--muted);font-family:'DM Mono',monospace;min-width:24px;flex-shrink:0;}
+.p-num{font-size:15px;font-weight:700;color:var(--muted);font-family:'DM Mono',monospace;min-width:28px;flex-shrink:0;line-height:1;}
 .player-btn.active .p-num{color:var(--accent);}
-.p-name{font-size:12px;font-weight:600;color:var(--text);line-height:1.2;}
+.p-name{font-size:11px;font-weight:600;color:var(--text);line-height:1.2;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .player-btn.active .p-name{color:var(--accent);}
 
 /* ── RESULT BUTTONS (tall, stacked) ── */
@@ -157,6 +157,11 @@ select:focus,input:focus{border-color:var(--accent);}
       <!-- LEFT: player list -->
       <div class="card" style="margin-bottom:0;">
         <div class="panel-label">1 — Who shot?</div>
+        <div style="display:flex;gap:4px;margin-bottom:6px;">
+          <button id="sort-num" onclick="setPlayerSort('num')" style="flex:1;font-size:10px;font-weight:600;padding:4px 2px;border-radius:5px;border:1px solid var(--border2);background:var(--accent);color:#fff;cursor:pointer;font-family:'DM Sans',sans-serif;">#</button>
+          <button id="sort-first" onclick="setPlayerSort('first')" style="flex:1;font-size:10px;font-weight:600;padding:4px 2px;border-radius:5px;border:1px solid var(--border2);background:var(--surface2);color:var(--muted);cursor:pointer;font-family:'DM Sans',sans-serif;">First</button>
+          <button id="sort-sur" onclick="setPlayerSort('sur')" style="flex:1;font-size:10px;font-weight:600;padding:4px 2px;border-radius:5px;border:1px solid var(--border2);background:var(--surface2);color:var(--muted);cursor:pointer;font-family:'DM Sans',sans-serif;">Sur</button>
+        </div>
         <div class="player-list" id="player-grid"></div>
       </div>
       <!-- RIGHT: result only -->
@@ -298,6 +303,7 @@ function loadSquad(){
 }
 
 let SQUAD=loadSquad();
+let playerSort='num';  // 'num' | 'first' | 'sur'
 
 const FORMAT_PERIODS={
   'rep4x10':{count:4,label:'Q',name:'VJBL 4×10'},
@@ -393,14 +399,38 @@ function redrawDotsForPeriod(){
 }
 
 // ── Player list ──
+function setPlayerSort(s){
+  playerSort=s;
+  ['num','first','sur'].forEach(k=>{
+    const btn=document.getElementById('sort-'+k);
+    if(btn){
+      btn.style.background=k===s?'var(--accent)':'var(--surface2)';
+      btn.style.color=k===s?'#fff':'var(--muted)';
+      btn.style.borderColor=k===s?'var(--accent)':'var(--border2)';
+    }
+  });
+  renderPlayerGrid();
+}
+
 function renderPlayerGrid(){
+  const sorted=[...SQUAD].sort((a,b)=>{
+    if(playerSort==='num') return parseInt(a.num.replace('#',''))-parseInt(b.num.replace('#',''));
+    if(playerSort==='first') return a.name.split(' ')[0].localeCompare(b.name.split(' ')[0]);
+    // sur
+    const aSur=a.name.split(' ').pop();const bSur=b.name.split(' ').pop();
+    return aSur.localeCompare(bSur);
+  });
   const grid=document.getElementById('player-grid');
-  grid.innerHTML=SQUAD.map(p=>`
-    <div class="player-btn${selectedPlayer&&selectedPlayer.id===p.id?' active':''}"
+  grid.innerHTML=sorted.map(p=>{
+    const surname=p.name.split(' ').pop();
+    const first=p.name.split(' ')[0];
+    const label=playerSort==='first'?first:surname;
+    return`<div class="player-btn${selectedPlayer&&selectedPlayer.id===p.id?' active':''}"
          onclick="selectPlayer(${p.id})">
-      <span class="p-num">${p.num}</span>
-      <span class="p-name">${p.name}</span>
-    </div>`).join('');
+      <span class="p-num">${p.num.replace('#','')}</span>
+      <span class="p-name">${label}</span>
+    </div>`;
+  }).join('');
 }
 
 function selectPlayer(id){
@@ -419,10 +449,16 @@ function selectType(made){
 function updateHint(){
   const hint=document.getElementById('court-hint');
   const svg=document.getElementById('court-svg');
-  if(!selectedPlayer&&selectedMade===null){hint.textContent='Select player + result, then tap court';svg.classList.remove('ready');}
-  else if(!selectedPlayer){hint.textContent='Now select a player ↑';svg.classList.remove('ready');}
-  else if(selectedMade===null){hint.textContent='Now select Made or Missed ↑';svg.classList.remove('ready');}
-  else{
+  if(!selectedPlayer&&selectedMade===null){
+    hint.textContent='Select player + result, then tap court';
+    svg.classList.remove('ready');
+  } else if(!selectedPlayer){
+    hint.textContent='Select a player ↑';
+    svg.classList.remove('ready');
+  } else if(selectedMade===null){
+    hint.textContent=selectedPlayer.name+' — select Made or Missed ↑';
+    svg.classList.remove('ready');
+  } else {
     hint.textContent=(selectedMade?'● Made':'✕ Missed')+' · '+selectedPlayer.name+' · tap the spot';
     svg.classList.add('ready');
   }
@@ -455,7 +491,12 @@ function handleTap(clientX,clientY){
   addDotToChart(shot);
   renderLog();
   updateUndoBtn();
-  toast((selectedMade?'● Made':'✕ Missed')+' — '+selectedPlayer.name);
+  // Sticky player — keep selected for next shot, clear result so it must be re-tapped
+  selectedMade=null;
+  document.getElementById('btn-made').classList.remove('active');
+  document.getElementById('btn-missed').classList.remove('active');
+  updateHint();
+  toast((shot.made?'● Made':'✕ Missed')+' — '+selectedPlayer.name);
 }
 
 svg.addEventListener('click',e=>{if(!e.touches)handleTap(e.clientX,e.clientY);});
