@@ -88,12 +88,6 @@ select:focus,input:focus{border-color:var(--accent);}
 #court-svg{width:100%;display:block;border-radius:8px;}
 #court-svg.ready{cursor:crosshair;}
 
-/* ── CONFIRM BAR ── */
-.confirm-bar{display:none;margin-top:10px;background:var(--accent-bg);border:1px solid rgba(59,130,246,0.3);border-radius:var(--rs);padding:10px 14px;}
-.confirm-bar.show{display:block;}
-.confirm-info{font-size:13px;font-weight:600;color:var(--accent);margin-bottom:8px;}
-.confirm-btns{display:grid;grid-template-columns:1fr 2fr;gap:8px;}
-
 /* ── LOG ── */
 .period-section{margin-bottom:12px;}
 .period-section-label{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.7px;padding-bottom:5px;border-bottom:1px solid var(--border);margin-bottom:6px;}
@@ -165,7 +159,7 @@ select:focus,input:focus{border-color:var(--accent);}
         <div class="panel-label">1 — Who shot?</div>
         <div class="player-list" id="player-grid"></div>
       </div>
-      <!-- RIGHT: result + confirm -->
+      <!-- RIGHT: result only -->
       <div class="card" style="margin-bottom:0;">
         <div class="panel-label">2 — Result</div>
         <div class="result-stack">
@@ -178,21 +172,16 @@ select:focus,input:focus{border-color:var(--accent);}
             <div class="type-label">Missed</div>
           </div>
         </div>
-        <!-- Confirm bar lives here, under result buttons -->
-        <div class="confirm-bar" id="confirm-bar" style="margin-top:8px;">
-          <div class="confirm-info" id="confirm-info"></div>
-          <div class="confirm-btns">
-            <button class="btn" style="font-size:12px;padding:9px 8px;" onclick="cancelShot()">Cancel</button>
-            <button class="btn btn-primary" style="font-size:12px;padding:9px 8px;" onclick="confirmShot()">✓ Log shot</button>
-          </div>
-        </div>
       </div>
     </div>
 
     <!-- Court -->
     <div class="card">
-      <div class="sec-label">3 — Tap location on court</div>
-      <div class="court-hint" id="court-hint">Complete steps 1 &amp; 2 first</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+        <div class="sec-label" style="margin-bottom:0;">3 — Tap location on court</div>
+        <button id="undo-btn" onclick="undoLastShot()" style="font-size:12px;font-weight:600;padding:5px 12px;border-radius:var(--rs);border:1px solid var(--border2);background:var(--surface2);color:var(--muted);cursor:pointer;display:none;">↩ Undo</button>
+      </div>
+      <div class="court-hint" id="court-hint">Select player + result, then tap court</div>
       <div class="court-wrap">
         <svg id="court-svg" viewBox="0 0 300 165" xmlns="http://www.w3.org/2000/svg">
           <!-- court floor -->
@@ -233,7 +222,6 @@ select:focus,input:focus{border-color:var(--accent);}
           <text x="250" y="82" text-anchor="middle" font-size="7" fill="#3b82f6" opacity="0.6">Mid-R</text>
           <text x="150" y="125" text-anchor="middle" font-size="7" fill="#3b82f6" opacity="0.6">Top key</text>
           <g id="shot-dots"></g>
-          <circle id="pending-circle" cx="-50" cy="-50" r="5" fill="#3b82f6" opacity="0.6" stroke="white" stroke-width="1.5"/>
         </svg>
       </div>
     </div>
@@ -328,7 +316,6 @@ let currentPeriod=1;
 let periodCount=4;
 let periodLabel='Q';
 let gameLabel='';
-let pendingX=null,pendingY=null;
 const SK='wildcats_shots_session';
 
 function load(){
@@ -343,7 +330,7 @@ function load(){
       document.getElementById('setup-screen').style.display='none';
       document.getElementById('logger-screen').style.display='block';
       document.getElementById('header-sub').textContent=gameLabel||'Game in progress';
-      renderPeriodBar();renderPlayerGrid();redrawDotsForPeriod();renderLog();
+      renderPeriodBar();renderPlayerGrid();redrawDotsForPeriod();renderLog();updateUndoBtn();
     }
   }catch(e){}
 }
@@ -386,7 +373,6 @@ function renderPeriodBar(){
       selectedPlayer=null;selectedMade=null;
       document.getElementById('btn-made').classList.remove('active');
       document.getElementById('btn-missed').classList.remove('active');
-      cancelShot();
       renderPeriodBar();renderPlayerGrid();
       redrawDotsForPeriod();
       updateHint();
@@ -419,7 +405,7 @@ function renderPlayerGrid(){
 
 function selectPlayer(id){
   selectedPlayer=SQUAD.find(p=>p.id===id);
-  renderPlayerGrid();updateHint();cancelShot();
+  renderPlayerGrid();updateHint();
 }
 
 // ── Made/missed ──
@@ -427,7 +413,7 @@ function selectType(made){
   selectedMade=made;
   document.getElementById('btn-made').classList.toggle('active',made===true);
   document.getElementById('btn-missed').classList.toggle('active',made===false);
-  updateHint();cancelShot();
+  updateHint();
 }
 
 function updateHint(){
@@ -442,45 +428,23 @@ function updateHint(){
   }
 }
 
-// ── Court tap ──
+// ── Court tap — auto-logs immediately ──
 const svg=document.getElementById('court-svg');
 
 function handleTap(clientX,clientY){
-  if(!selectedPlayer||selectedMade===null){toast('Select player + result first');return;}
+  if(!selectedPlayer||selectedMade===null){
+    toast('Select player + result first');return;
+  }
   const rect=svg.getBoundingClientRect();
-  pendingX=Math.round(((clientX-rect.left)/rect.width)*300*10)/10;
-  pendingY=Math.round(((clientY-rect.top)/rect.height)*165*10)/10;
-  const pc=document.getElementById('pending-circle');
-  pc.setAttribute('cx',pendingX);pc.setAttribute('cy',pendingY);
-  pc.setAttribute('fill',selectedMade?'#16a34a':'#dc2626');
-  const bar=document.getElementById('confirm-bar');
-  document.getElementById('confirm-info').textContent=(selectedMade?'● Made':'✕ Missed')+' — '+selectedPlayer.name+' — '+periodLabel+currentPeriod;
-  bar.classList.add('show');
-}
-
-svg.addEventListener('click',e=>{if(!e.touches)handleTap(e.clientX,e.clientY);});
-svg.addEventListener('touchend',e=>{
-  e.preventDefault();
-  const t=e.changedTouches[0];
-  handleTap(t.clientX,t.clientY);
-},{passive:false});
-
-function cancelShot(){
-  pendingX=null;pendingY=null;
-  document.getElementById('pending-circle').setAttribute('cx','-50');
-  document.getElementById('pending-circle').setAttribute('cy','-50');
-  document.getElementById('confirm-bar').classList.remove('show');
-}
-
-function confirmShot(){
-  if(pendingX===null||!selectedPlayer||selectedMade===null)return;
+  const x=Math.round(((clientX-rect.left)/rect.width)*300*10)/10;
+  const y=Math.round(((clientY-rect.top)/rect.height)*165*10)/10;
   const shot={
     id:Date.now()+'_'+Math.random().toString(36).slice(2,7),
     game_id:'shots_'+gameLabel.replace(/\s+/g,'_'),
     player_id:selectedPlayer.id,
     player_name:selectedPlayer.name,
     player_num:selectedPlayer.num,
-    x:pendingX,y:pendingY,
+    x,y,
     made:selectedMade,
     period:currentPeriod,
     period_label:periodLabel+currentPeriod,
@@ -490,8 +454,37 @@ function confirmShot(){
   save();
   addDotToChart(shot);
   renderLog();
-  cancelShot();
+  updateUndoBtn();
   toast((selectedMade?'● Made':'✕ Missed')+' — '+selectedPlayer.name);
+}
+
+svg.addEventListener('click',e=>{if(!e.touches)handleTap(e.clientX,e.clientY);});
+svg.addEventListener('touchend',e=>{
+  e.preventDefault();
+  const t=e.changedTouches[0];
+  handleTap(t.clientX,t.clientY);
+},{passive:false});
+
+function undoLastShot(){
+  if(!shots.length)return;
+  const removed=shots.shift();  // most recent is first (unshift on add)
+  save();redrawDotsForPeriod();renderLog();updateUndoBtn();
+  toast('Undone: '+(removed.made?'Made':'Missed')+' — '+removed.player_name);
+}
+
+function updateUndoBtn(){
+  const btn=document.getElementById('undo-btn');
+  if(!btn)return;
+  if(shots.length>0){
+    const last=shots[0];
+    btn.style.display='block';
+    btn.textContent='↩ Undo '+(last.made?'●':'✕')+' '+last.player_name;
+    btn.style.color=last.made?'var(--green)':'var(--red)';
+    btn.style.borderColor=last.made?'rgba(22,163,74,0.4)':'rgba(220,38,38,0.4)';
+    btn.style.background=last.made?'var(--green-bg)':'var(--red-bg)';
+  } else {
+    btn.style.display='none';
+  }
 }
 
 function addDotToChart(shot){
@@ -611,8 +604,6 @@ function newGame(){
   // Confirm if there are unsaved shots
   if(shots.length>0&&!confirm('Start a new game? Current shots will be cleared.\n\nMake sure you have already exported/copied this game\'s shots.'))return;
   selectedPlayer=null;selectedMade=null;currentPeriod=1;
-  pendingX=null;pendingY=null;
-  cancelShot();
   // Re-enable court in case it was locked
   const svg=document.getElementById('court-svg');
   if(svg)svg.style.pointerEvents='';
@@ -635,11 +626,11 @@ function newGame(){
 
 function clearSession(){
   if(!confirm('Clear all shots and start over?'))return;
-  shots=[];pendingX=null;pendingY=null;selectedPlayer=null;selectedMade=null;
+  shots=[];selectedPlayer=null;selectedMade=null;
   gameLabel='';periodCount=4;periodLabel='Q';currentPeriod=1;
   save();
   document.getElementById('shot-dots').innerHTML='';
-  cancelShot();renderLog();
+  renderLog();updateUndoBtn();
   const svg=document.getElementById('court-svg');
   if(svg)svg.style.pointerEvents='';
   document.getElementById('btn-made').classList.remove('active');
