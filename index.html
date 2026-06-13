@@ -664,8 +664,9 @@ table.stbl td:first-child{text-align:left;font-weight:500;}
   </div>
   <div class="card">
     <div class="sec-label">Export</div>
-    <div class="backup-info">CSV contains one row per player per game — ready for Excel or Google Sheets charts.</div>
+    <div class="backup-info">Analytics CSV — one row per player per game. Timeline CSV — one row per event, for video sync.</div>
     <button class="btn btn-primary" style="width:100%;margin-bottom:8px;" onclick="exportCSV()">⬇ Export analytics CSV</button>
+    <button class="btn btn-primary" style="width:100%;margin-bottom:8px;background:var(--purple);border-color:var(--purple);" onclick="exportTimelineCSV()">⬇ Export timeline CSV (video sync)</button>
     <div class="g2">
       <button class="btn" onclick="exportData()">Export JSON backup</button>
       <button class="btn" onclick="document.getElementById('import-file').click()">Restore JSON backup</button>
@@ -2386,57 +2387,146 @@ function exportCSV(){
   if(games.length===0){showSyncBadge('No games to export');return;}
   const sorted=[...state.players].sort((a,b)=>a.id-b.id);
   const rows=[];
-  // header — team-level opp reb only on first player row per game
-  rows.push(['Date','Round','Opposition','Venue','Game Type','Result','Eltham Score','Opp Score',
+
+  // ── HEADER ──
+  rows.push([
+    // Game context
+    'Game ID','Date','Round','Opposition','Venue','Game Type','Result','Margin',
+    'Eltham Score','Opp Score',
+    // Team-level rebounding
     'Opp Reb Off','Opp Reb Def','Opp Reb Total',
-    'Player','#','MIN (decimal)','PTS','FGM','FGA','FG%','3PTM','3PTA','3PT%','FTM','FTA','FT%','REB','AST','TO','STL','BLK','PF'].join(','));
+    // Player identity
+    'Player','#',
+    // Time
+    'MIN (mm:ss)','MIN (decimal)',
+    // Scoring
+    'PTS','Pts/40',
+    // Field goals — makes before attempts
+    'FGM','FGA','FG%',
+    // 3-pointers
+    '3PTM','3PTA','3PT%',
+    // Free throws
+    'FTM','FTA','FT%',
+    // Other stats
+    'REB','AST','TO','STL','BLK','PF',
+    // Impact
+    '+/-',
+    // Shot chart
+    'Shots Made','Shots Att','Shot FG%',
+    '3PT Made (chart)','3PT Att (chart)','3PT% (chart)',
+    'Paint Made','Paint Att',
+    'Mid Made','Mid Att',
+    'Corner3 Made','Corner3 Att',
+  ].join(','));
+
+  // Shot zone helpers (matching zones from the shot chart)
+  const ZONES={
+    paint:   {x1:88,y1:3, x2:212,y2:95},
+    corner3l:{x1:3, y1:3, x2:28, y2:62},
+    corner3r:{x1:272,y1:3,x2:297,y2:62},
+    mid:     {x1:3, y1:62,x2:297,y2:130},
+    top3:    {x1:88,y1:95,x2:212,y2:130},
+  };
+  function inZone(z,x,y){return x>=z.x1&&x<=z.x2&&y>=z.y1&&y<=z.y2;}
+  function isChartThree(x,y){
+    return inZone(ZONES.corner3l,x,y)||inZone(ZONES.corner3r,x,y)||
+           (inZone(ZONES.mid,x,y)&&!inZone(ZONES.paint,x,y)&&y>=95)||
+           inZone(ZONES.top3,x,y);
+  }
+
   games.forEach(g=>{
     const diff=(g.scoreHome||0)-(g.scoreAway||0);
     const result=diff>0?'W':diff<0?'L':'D';
+    const margin=diff;
     const oppRebOff=g.summary?g.summary.oppRebOff||0:(g.oppRebOff||0);
     const oppRebDef=g.summary?g.summary.oppRebDef||0:(g.oppRebDef||0);
-    sorted.forEach((p,pi)=>{
+    const gameId=String(g.id||'');
+
+    // Shot chart data for this game
+    const gameShots=[
+      ...(g.shots||[]),
+      ...(shotCache[gameId]||[])
+    ];
+    // Deduplicate by shot id
+    const seenIds=new Set();
+    const shots=gameShots.filter(s=>{if(seenIds.has(s.id))return false;seenIds.add(s.id);return true;});
+
+    // Plus/minus per player
+    const pmMap=computePlusMinus(g);
+
+    sorted.forEach(p=>{
       const m=g.summary?g.summary.minutes[p.id]||0:0;
       const s=g.summary&&g.summary.stats?g.summary.stats[p.id]||emptyStats():emptyStats();
-      const fg=s.fga>0?Math.round(s.fgm/s.fga*100)+'%':'';
-      const ft=s.fta>0?Math.round((s.ftm||0)/s.fta*100)+'%':'';
-      const minsStr=(Math.round(m*10)/10).toFixed(1);
-      // Opp reb only on first player row per game (team stat, not per-player)
-      const rebOff=pi===0?oppRebOff:'';
-      const rebDef=pi===0?oppRebDef:'';
-      const rebTot=pi===0?(oppRebOff+oppRebDef):'';
+      const pm=pmMap[p.id]!==undefined?pmMap[p.id]:'';
+
+      // Time formatting
+      const mDec=(Math.round(m*10)/10).toFixed(1);
+      const mMin=Math.floor(m);
+      const mSec=String(Math.round((m-mMin)*60)).padStart(2,'0');
+      const mFmt=mMin+':'+mSec;
+
+      // Pts/40
+      const pts40=m>0.5?Math.round((s.pts||0)/m*40*10)/10:'';
+
+      // Stats — integers only, no % symbol
+      const fgPct=s.fga>0?Math.round(s.fgm/s.fga*100):'';
+      const fg3Pct=(s.fg3a||0)>0?Math.round((s.fg3m||0)/s.fg3a*100):'';
+      const ftPct=s.fta>0?Math.round((s.ftm||0)/s.fta*100):'';
+
+      // Shot chart per player
+      const pShots=shots.filter(sh=>sh.player_id===p.id||sh.player_name===p.name);
+      const sMade=pShots.filter(sh=>sh.made).length;
+      const sAtt=pShots.length;
+      const sFgPct=sAtt>0?Math.round(sMade/sAtt*100):'';
+
+      const s3=pShots.filter(sh=>isChartThree(parseFloat(sh.x),parseFloat(sh.y)));
+      const s3made=s3.filter(sh=>sh.made).length;
+      const s3att=s3.length;
+      const s3pct=s3att>0?Math.round(s3made/s3att*100):'';
+
+      const sPaint=pShots.filter(sh=>inZone(ZONES.paint,parseFloat(sh.x),parseFloat(sh.y)));
+      const sPaintMade=sPaint.filter(sh=>sh.made).length;
+
+      const sMid=pShots.filter(sh=>inZone(ZONES.mid,parseFloat(sh.x),parseFloat(sh.y))&&!inZone(ZONES.top3,parseFloat(sh.x),parseFloat(sh.y)));
+      const sMidMade=sMid.filter(sh=>sh.made).length;
+
+      const sC3=pShots.filter(sh=>inZone(ZONES.corner3l,parseFloat(sh.x),parseFloat(sh.y))||inZone(ZONES.corner3r,parseFloat(sh.x),parseFloat(sh.y)));
+      const sC3made=sC3.filter(sh=>sh.made).length;
+
+      const pmStr=pm!==''?(pm>0?'+'+pm:String(pm)):'';
+
       rows.push([
+        gameId,
         g.date||'',
         g.round?'R'+g.round:'',
         '"'+(g.opponent||'').replace(/"/g,'""')+'"',
         '"'+(g.venue||'').replace(/"/g,'""')+'"',
         g.gameType==='tournament'?'Tournament':g.gameType==='domestic'?'Domestic':'VJBL',
         result,
+        margin,
         g.scoreHome||0,
         g.scoreAway||0,
-        rebOff,rebDef,rebTot,
+        oppRebOff,oppRebDef,oppRebOff+oppRebDef,
         '"'+p.name.replace(/"/g,'""')+'"',
         p.num,
-        minsStr,
+        mFmt,
+        mDec,
         s.pts||0,
-        s.fgm,
-        s.fga,
-        fg,
-        s.fg3m||0,
-        s.fg3a||0,
-        (s.fg3a||0)>0?Math.round((s.fg3m||0)/s.fg3a*100)+'%':'',
-        s.ftm||0,
-        s.fta||0,
-        ft,
-        s.reb,
-        s.ast,
-        s.tov,
-        s.stl,
-        s.blk,
-        s.foul||0
+        pts40,
+        s.fgm,s.fga,fgPct,
+        s.fg3m||0,s.fg3a||0,fg3Pct,
+        s.ftm||0,s.fta||0,ftPct,
+        s.reb,s.ast,s.tov,s.stl,s.blk,s.foul||0,
+        pmStr,
+        sMade,sAtt,sFgPct,
+        s3made,s3att,s3pct,
+        sPaintMade,sPaint.length,
+        sMidMade,sMid.length,
+        sC3made,sC3.length,
       ].join(','));
     });
   });
+
   const csv=rows.join('\n');
   const blob=new Blob([csv],{type:'text/csv'});
   const url=URL.createObjectURL(blob);
@@ -2446,6 +2536,78 @@ function exportCSV(){
   a.click();URL.revokeObjectURL(url);
   showSyncBadge('✓ CSV exported — '+games.length+' games, '+sorted.length+' players');
 }
+
+function exportTimelineCSV(){
+  const games=state.games;
+  if(games.length===0){showSyncBadge('No games to export');return;}
+  const rows=[];
+  rows.push([
+    'Game ID','Date','Round','Opposition','Venue','Game Type','Result',
+    'Eltham Score','Opp Score',
+    'Quarter','Period Label','Time Remaining','Elapsed Secs',
+    'Event ID','Event Type','Player','Player #','Player ID',
+    'Score At Event','Score Home','Score Away',
+    'Event Description'
+  ].join(','));
+  const EVENT_LABELS={
+    'pts_1':'Free throw made','pts_2':'Field goal made (+2)','pts_3':'Three pointer made (+3)',
+    'fga':'Missed shot (2pt)','fga3':'Missed shot (3pt)','ft_miss':'Free throw missed',
+    'ast':'Assist','reb':'Rebound','stl':'Steal','blk':'Block','tov':'Turnover','foul':'Personal foul',
+    'opp_pts':'Opponent score','opp_reb_off':'Opponent offensive rebound','opp_reb_def':'Opponent defensive rebound',
+    'sub_on':'Sub on','sub_off':'Sub off','timeout':'Timeout — Eltham','opp_timeout':'Timeout — Opponent',
+    'qend':'End of period','start':'Game start',
+  };
+  games.forEach(g=>{
+    if(!g.timeline||!g.timeline.length)return;
+    const diff=(g.scoreHome||0)-(g.scoreAway||0);
+    const result=diff>0?'W':diff<0?'L':'D';
+    const periodSecs=g.periodSecs||600;
+    const halves=isHalves(g.gameType);
+    const pLabel=halves?'H':'Q';
+    const gameId=String(g.id||'');
+    g.timeline.forEach(ev=>{
+      const q=ev.q||1;
+      let timeRemaining=0,elapsedSecs=0;
+      if(ev.ts){
+        const match=ev.ts.match(/(\d+):(\d+)$/);
+        if(match){elapsedSecs=parseInt(match[1])*60+parseInt(match[2]);timeRemaining=Math.max(0,periodSecs-elapsedSecs);}
+      }
+      const evLabel=EVENT_LABELS[ev.type]||ev.type;
+      const player=ev.data&&ev.data.player?ev.data.player:'';
+      const playerId=ev.data&&ev.data.pid!=null?ev.data.pid:'';
+      const playerObj=playerId!==''?state.players.find(p=>p.id===playerId):player?state.players.find(p=>p.name===player):null;
+      const playerNum=playerObj?playerObj.num:'';
+      const sh=ev.scoreHome!=null?ev.scoreHome:'';
+      const sa=ev.scoreAway!=null?ev.scoreAway:'';
+      const scoreStr=sh!==''?sh+'-'+sa:'';
+      let desc=player?player+' — '+evLabel:evLabel;
+      if(ev.type==='opp_pts')desc=(g.opponent||'Opponent')+' +'+(ev.data&&ev.data.pts?ev.data.pts:'')+' pts';
+      if(ev.type==='start'&&ev.data&&ev.data.label)desc=ev.data.label;
+      if(ev.type==='qend')desc='End of '+pLabel+q;
+      rows.push([
+        gameId,g.date||'',g.round?'R'+g.round:'',
+        '"'+(g.opponent||'').replace(/"/g,'""')+'"',
+        '"'+(g.venue||'').replace(/"/g,'""')+'"',
+        g.gameType==='tournament'?'Tournament':g.gameType==='domestic'?'Domestic':'VJBL',
+        result,g.scoreHome||0,g.scoreAway||0,
+        q,pLabel+q,timeRemaining,elapsedSecs,
+        ev.id||'',ev.type,
+        '"'+player.replace(/"/g,'""')+'"',
+        playerNum,playerId,scoreStr,sh,sa,
+        '"'+desc.replace(/"/g,'""')+'"'
+      ].join(','));
+    });
+  });
+  const csv=rows.join('\n');
+  const blob=new Blob([csv],{type:'text/csv'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;
+  a.download='wildcats_timeline_'+new Date().toISOString().split('T')[0]+'.csv';
+  a.click();URL.revokeObjectURL(url);
+  showSyncBadge('\u2713 Timeline exported \u2014 '+games.length+' games, '+games.reduce((t,g)=>t+(g.timeline?g.timeline.length:0),0)+' events');
+}
+
 
 // Cloud sync helpers
 async function pushAllToCloud(){
